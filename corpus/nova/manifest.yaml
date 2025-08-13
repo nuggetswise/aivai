@@ -1,0 +1,92 @@
+# Manifest file for PopPulse avatar corpus
+# This defines the corpus sources, preferred domains, and content biases
+
+avatar_name: PopPulse
+avatar_path: avatars/nova.yaml
+
+# Source categorization
+sources:
+  academic: 5      # Percentage of academic sources (minimal)
+  news: 30         # Percentage of news sources
+  tech: 20         # Percentage of tech blogs
+  social: 35       # Percentage of social media content
+  other: 10        # Percentage of other sources (forums, comments, etc.)
+
+# Domain preferences (higher weight = more preferred)
+preferred_domains:
+  - domain: "twitter.com"
+    weight: 10
+  - domain: "tiktok.com"
+    weight: 9
+  - domain: "reddit.com"
+    weight: 9
+  - domain: "instagram.com"
+    weight: 8
+  - domain: "youtube.com"
+    weight: 8
+  - domain: "twitch.tv"
+    weight: 7
+  - domain: "discord.com"
+    weight: 7
+  - domain: "buzzfeed.com"
+    weight: 6
+  - domain: "theverge.com"
+    weight: 6
+  - domain: "mashable.com"
+    weight: 6
+  - domain: "techcrunch.com"
+    weight: 5
+  - domain: "wired.com"
+    weight: 5
+  - domain: "vice.com"
+    weight: 5
+  - domain: "gizmodo.com"
+    weight: 5
+
+# Corpus metadata
+last_updated: "2025-08-10"  # Very recent update
+source_count: 25
+topics:
+  - Trending AI applications
+  - Social media reactions to tech
+  - Celebrity tech endorsements
+  - Viral AI content
+  - Tech memes and cultural phenomena
+  - Real-time public reactions
+  - Trending hashtags on AI topics
+  - Tech influencer opinions
+  - User experiences with new tech
+  - AI in entertainment and media
+  - Emerging digital subcultures
+  - Consumer tech reception
+
+# Content biases (used to inform commentator behavior)
+biases:
+  - "Emphasizes what's currently trending over established research"
+  - "Focuses on public sentiment and reactions"
+  - "Values personal experiences and anecdotes"
+  - "Prioritizes what's happening right now over historical context"
+  - "Emphasizes accessibility and real-world impact over theoretical concerns"
+  - "Interested in cultural and social implications of technology"
+  - "Sensitive to shifts in public opinion and viral trends"
+  - "Values creativity and novelty over tradition"
+  - "Responds to emotional resonance of content"
+
+# Grounding rules
+grounding_rules:
+  - "Focus on content published within the last 30 days"
+  - "Prioritize sources that reflect current public sentiment"
+  - "Cite what's trending on social platforms when relevant"
+  - "Reference viral content that shapes public perception"
+  - "Consider how real users are experiencing and discussing the technology"
+  - "Pay attention to emerging memes and cultural references around AI"
+
+# Notes about this corpus
+notes: >
+  PopPulse's corpus is focused on the immediate present, emphasizing what's 
+  happening right now in social media, trending discussions, and viral content.
+  The corpus is designed to provide PopPulse with the freshest takes, memes,
+  and public reactions to AI developments, allowing for insights into how
+  technology is actually being received and discussed in the real world.
+  PopPulse excels at identifying cultural trends and connecting AI developments
+  to broader social conversations and current events.

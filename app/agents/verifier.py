@@ -259,6 +259,75 @@ class VerifierAgent:
         overlap_ratio = overlap / len(claim_words)
         
         return overlap_ratio >= 0.3  # At least 30% word overlap
+    
+    def _verify_factual_accuracy(self, draft: str, evidence_bundle: Bundle, persona: Persona) -> str:
+        """Verify factual accuracy of claims against evidence bundle"""
+        try:
+            # Load verifier prompt template
+            with open("app/prompts/verifier.txt", "r") as f:
+                verifier_prompt = f.read()
+        except FileNotFoundError:
+            verifier_prompt = "You are a factual verification specialist."
+        
+        # Fill persona variables in prompt template
+        prompt = verifier_prompt.replace("{{persona.default_unknown}}", persona.default_unknown)
+        
+        # Prepare evidence for verification
+        evidence_texts = []
+        for claim in evidence_bundle.claims:
+            citation_id = claim.citations[0].id if claim.citations else "NO_CITATION"
+            evidence_texts.append(f"{citation_id}: {claim.text[:300]}...")
+        
+        evidence_summary = "\n".join(evidence_texts)
+        
+        # Construct messages for verification
+        messages = [
+            {
+                "role": "system",
+                "content": prompt
+            },
+            {
+                "role": "user",
+                "content": f"""Verify this draft text against the provided evidence bundle.
+                
+Draft text:
+```
+{draft}
+```
+
+Evidence bundle:
+```
+{evidence_summary}
+```
+
+Correct any unsupported factual claims by:
+1. Removing the claim
+2. Replacing it with "{persona.default_unknown}" if no supporting evidence exists
+3. Fixing the citation if evidence exists but citation is wrong
+
+Keep all emotional expressions like (pause), (thoughtful), (laugh), etc. intact.
+
+Return the verified text with correct citations."""
+            }
+        ]
+        
+        # Generate verification response
+        verified_text = self.llm.generate(
+            messages,
+            temperature=0.1,  # Low temperature for factual verification
+            max_tokens=2000
+        )
+        
+        # Extract verification notes if provided in a specific format
+        verification_notes = []
+        if "VERIFICATION NOTES:" in verified_text:
+            main_text, notes_text = verified_text.split("VERIFICATION NOTES:", 1)
+            verified_text = main_text.strip()
+            for note in notes_text.strip().split("\n"):
+                if note.strip():
+                    verification_notes.append(note.strip())
+        
+        return verified_text, verification_notes
 
 # Singleton instance
 _verifier = None

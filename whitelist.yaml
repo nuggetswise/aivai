@@ -1,1 +1,115 @@
-# This file is intentionally left blank for source whitelisting policies.
+# Domain policies for AI vs AI Podcast content sourcing
+# This file defines trusted, permitted, and blocked domains for research
+
+# Trusted domains (trust_score = 9-10)
+# Content from these domains is considered highly reliable
+trusted_domains:
+  - "*.edu"         # Educational institutions
+  - "*.gov"         # Government sites
+  - "arxiv.org"     # Scientific papers
+  - "nature.com"    # Scientific journal
+  - "science.org"   # Scientific journal
+  - "acm.org"       # Association for Computing Machinery
+  - "ieee.org"      # IEEE
+  - "nih.gov"       # National Institutes of Health
+  - "who.int"       # World Health Organization
+  - "un.org"        # United Nations
+  - "worldbank.org" # World Bank
+  - "imf.org"       # International Monetary Fund
+
+# Permitted domains (trust_score = 6-8)
+# Content from these domains is allowed but with moderate trust
+permitted_domains:
+  # News sites
+  - "nytimes.com"
+  - "wsj.com"
+  - "washingtonpost.com"
+  - "reuters.com"
+  - "apnews.com"
+  - "bbc.com"
+  - "economist.com"
+  - "npr.org"
+  - "bloomberg.com"
+  
+  # Tech sites
+  - "techcrunch.com"
+  - "wired.com"
+  - "arstechnica.com"
+  - "technologyreview.com"
+  - "venturebeat.com"
+  
+  # Research organizations
+  - "pewresearch.org"
+  - "mckinsey.com"
+  - "rand.org"
+  - "brookings.edu"
+
+# Greylist domains (trust_score = 3-5)
+# Content allowed but with low trust, requires more verification
+greylist_domains:
+  # Blogs and less formal sources
+  - "medium.com"
+  - "substack.com"
+  - "*.wordpress.com"
+  - "*.blogspot.com"
+  
+  # Social media (use with caution)
+  - "twitter.com"
+  - "linkedin.com"
+  - "facebook.com"
+  - "reddit.com"
+
+# Blocked domains (trust_score = 0-2)
+# Content from these domains is not allowed
+blocked_domains:
+  # Known misinformation sites (examples)
+  - "infowars.com"
+  - "naturalnews.com"
+  
+  # Domains with predominantly user-generated content
+  - "quora.com"
+  - "pinterest.com"
+  - "instagram.com"
+  - "tiktok.com"
+  - "youtube.com"  # Too variable in quality
+  
+  # Content farms and low-quality sources
+  - "wikihow.com"
+  - "answers.com"
+  - "ehow.com"
+
+# Policy settings
+policy_settings:
+  enforce_whitelist: false      # If true, only domains in trusted/permitted are allowed
+  min_trust_score: 5            # Minimum trust score to accept content
+  require_citation: true        # Require citations for factual claims
+  max_domain_ratio: 0.3         # Maximum ratio of content from a single domain
+  freshness_days_default: 120   # Default freshness window in days
+  freshness_days_tech: 60       # Tech topic freshness window in days
+  freshness_days_news: 30       # News topic freshness window in days
+
+default:
+  whitelist:
+    - ipcc.ch
+    - un.org
+    - undp.org
+    - nasa.gov
+    - noaa.gov
+    - wri.org
+    - epa.gov
+    - who.int
+    - wikipedia.org
+    - bbc.com
+    - reuters.com
+    - nature.com
+    - science.org
+    - ucar.edu
+    - europa.eu
+    - nist.gov
+    - oecd.org
+    - mit.edu
+    - stanford.edu
+    - gov
+    - edu
+  greylist: []   # leave empty for now
+  blacklist: []  # turn off blocks for MVP

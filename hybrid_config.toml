@@ -1,0 +1,29 @@
+# Hybrid Development Configuration
+# This file defines settings for local vs production environments
+
+[local]
+# Local development - optimized for speed and debugging
+TTS_ENABLED = false  # Disable TTS for faster local testing
+DEBUG = true
+LOG_LEVEL = DEBUG
+MAX_SEARCH_RESULTS = 5  # Reduced for faster development
+MAX_TURNS_PER_PHASE = 1  # Shorter episodes for testing
+ENABLE_CACHING = true
+CORPUS_INDEXING = false  # Skip heavy indexing locally
+
+[production]
+# Lightning.ai production - full features enabled
+TTS_ENABLED = true
+DEBUG = false
+LOG_LEVEL = INFO
+MAX_SEARCH_RESULTS = 12
+MAX_TURNS_PER_PHASE = 4
+ENABLE_CACHING = true
+CORPUS_INDEXING = true
+GPU_ACCELERATION = true
+
+[hybrid_commands]
+# Commands for hybrid workflow
+local_dev = "Start frontend and API locally without heavy processing"
+lightning_deploy = "Deploy to Lightning.ai for full episode generation"
+sync_data = "Sync episode data between local and Lightning.ai"

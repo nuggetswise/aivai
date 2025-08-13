@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urlparse, urljoin
 import logging
 import numpy as np
+import yaml
 
 from app.config import settings
 from app.deps import get_search_client, get_embeddings_client
@@ -118,12 +119,21 @@ class DocumentIndexer:
     
     def _load_domain_list(self, list_type: str) -> List[str]:
         """Load domain whitelist or blacklist"""
-        # For now, return hardcoded lists based on pipeline.yaml
+        # For testing, use a more permissive whitelist that includes legitimate sources
         if list_type == "whitelist":
             return [
-                "europa.eu", "nist.gov", "oecd.org", "who.int",
-                "reuters.com", "bbc.com", "nature.com", "acm.org",
-                "mit.edu", "stanford.edu", "gov.uk", "canada.ca"
+                # Government and official sources
+                "gov", "edu", "europa.eu", "who.int", "nist.gov", "nasa.gov", 
+                "noaa.gov", "gov.uk", "canada.ca", "undp.org",
+                
+                # Academic and research
+                "mit.edu", "stanford.edu", "ucar.edu", "nature.com", "acm.org",
+                
+                # Trusted news and media
+                "reuters.com", "bbc.com", "oecd.org",
+                
+                # Other legitimate sources
+                "wikipedia.org", "earth.org"
             ]
         elif list_type == "blacklist":
             return ["contentfarm.*", "presswire.*", "*-seo-*"]
@@ -135,8 +145,14 @@ class DocumentIndexer:
         
         logger.info(f"Searching and indexing: {query}")
         
-        # Search for documents
-        search_results = self.search_client.search(query, max_results=max_results)
+        # Search for documents with raw content
+        search_results = self.search_client.search(
+            query, 
+            max_results=max_results,
+            include_raw_content=True,  # Use Tavily's raw content to avoid scraping issues
+            include_answer=False,
+            include_images=False
+        )
         
         # Process and index documents
         documents = []
@@ -174,29 +190,32 @@ class DocumentIndexer:
         if all_chunks:
             # Generate embeddings for all chunks
             chunk_texts = [chunk['text'] for chunk in all_chunks]
-            embeddings = self.embeddings_client.embed(chunk_texts)
-            embeddings_array = np.array(embeddings)
-            
-            # Add to vector store
-            chunk_docs = []
-            for chunk, embedding in zip(all_chunks, embeddings):
-                chunk_doc = {
-                    'doc_id': chunk['chunk_id'],
-                    'url': chunk['metadata'].get('url'),
-                    'title': chunk['metadata'].get('title'),
-                    'content': chunk['metadata'].get('content', ''),
-                    'chunk_text': chunk['text'],
-                    'created_at': datetime.utcnow(),
-                    'trust_score': self._calculate_trust_score(chunk['metadata'].get('url', '')),
-                    'freshness_score': self._calculate_freshness_score(chunk['metadata'].get('published_date')),
-                    'topic_tags': [query]  # Simple topic tagging
-                }
-                chunk_docs.append(chunk_doc)
-            
-            # Add to vector store
-            self.vector_store.add_documents(chunk_docs, embeddings_array)
-            
-            logger.info(f"Indexed {len(chunk_docs)} chunks from {len(documents)} documents")
+            try:
+                embeddings = self.embeddings_client.embed(chunk_texts)
+                embeddings_array = np.array(embeddings)
+                
+                # Add to vector store
+                chunk_docs = []
+                for chunk, embedding in zip(all_chunks, embeddings):
+                    chunk_doc = {
+                        'doc_id': chunk['chunk_id'],
+                        'url': chunk['metadata'].get('url'),
+                        'title': chunk['metadata'].get('title'),
+                        'content': chunk['metadata'].get('content', ''),
+                        'chunk_text': chunk['text'],
+                        'created_at': datetime.utcnow(),
+                        'trust_score': self._calculate_trust_score(chunk['metadata'].get('url', '')),
+                        'freshness_score': self._calculate_freshness_score(chunk['metadata'].get('published_date')),
+                        'topic_tags': [query]  # Simple topic tagging
+                    }
+                    chunk_docs.append(chunk_doc)
+                
+                # Add to vector store
+                self.vector_store.add_documents(chunk_docs, embeddings_array)
+                
+                logger.info(f"Indexed {len(chunk_docs)} chunks from {len(documents)} documents")
+            except Exception as e:
+                logger.warning(f"Failed to generate embeddings or add to vector store: {e}")
         
         # Create evidence bundle
         evidence_list = []
@@ -218,7 +237,10 @@ class DocumentIndexer:
         )
         
         # Save bundle to store
-        self.vector_store.save_bundle(bundle)
+        try:
+            self.vector_store.save_bundle(bundle)
+        except Exception as e:
+            logger.warning(f"Failed to save bundle: {e}")
         
         return bundle
     
@@ -288,69 +310,166 @@ class DocumentIndexer:
         return document_count
     
     def _process_search_result(self, result: Dict[str, Any], citation_num: int) -> Optional[Dict[str, Any]]:
-        """Process a single search result"""
+        """Process a single search result - accept all results and let LLM prompts handle quality assessment"""
         url = result.get('url', '')
         
-        # Apply domain filtering
-        if not self._is_domain_allowed(url):
-            logger.debug(f"Skipping blocked domain: {url}")
+        # Prefer Tavily's raw_content if available, fallback to content/snippet
+        raw_content = result.get('raw_content', '')
+        content = result.get('content', '')
+        snippet = result.get('snippet', '')
+        
+        # Use the best available content source
+        if raw_content and len(raw_content) > len(content):
+            used_content = raw_content
+        elif content:
+            used_content = content
+        else:
+            used_content = snippet
+        
+        # Clean and extract meaningful content
+        used_content = self._clean_extracted_content(used_content)
+        
+        # Only filter out very short content after cleaning
+        if not used_content or len(used_content) < 100:
+            logger.debug(f"Skipping result with insufficient content: {url}")
             return None
         
-        # Basic content extraction (placeholder - would use app/io/scraper.py)
-        content = result.get('content', result.get('snippet', ''))
-        
-        if len(content) < 50:  # Skip very short content
-            return None
-        
+        # Accept the result and let LLM prompts handle source quality assessment
         return {
             'url': url,
             'title': result.get('title', ''),
-            'content': content,
+            'content': used_content,
             'published_date': result.get('published_date'),
-            'citation_num': citation_num
+            'citation_num': citation_num,
+            # Still calculate trust score for ranking, but don't filter on it
+            'trust_score': self._calculate_trust_score(url)
         }
     
-    def _is_domain_allowed(self, url: str) -> bool:
-        """Check if domain is allowed based on whitelist/blacklist"""
-        if not url:
-            return False
+    def _clean_extracted_content(self, content: str) -> str:
+        """Clean extracted content to remove navigation, images, and boilerplate"""
+        if not content:
+            return ""
         
-        try:
-            domain = urlparse(url).netloc.lower()
-            
-            # Check blacklist first
-            for blocked in self.blocked_domains:
-                if blocked.replace('*', '') in domain:
-                    return False
-            
-            # If whitelist exists, domain must be in it
-            if self.trusted_domains:
-                return any(trusted in domain for trusted in self.trusted_domains)
-            
-            return True
+        # Remove common navigation patterns and page elements
+        lines = content.split('\n')
+        cleaned_lines = []
         
-        except Exception:
-            return False
+        # Flag to track if we're in main content
+        in_main_content = False
+        
+        # Extra aggressive cleaning - remove all EU domain notices and standard web elements
+        skip_patterns = [
+            # EU/Gov notices
+            "official european union website", "europa.eu", "**europa.eu**", "institutions and bodies",
+            "**lock**", "https://", "safely connected", "share sensitive information",
+            # Navigation
+            "skip to", "jump to", "main page", "contents", "random article",
+            "menu", "search", "login", "register", "home page", "main navigation",
+            # Links patterns
+            "[home]", "[data]", "[tools]", "[training]", "[about]", "[contact]",
+            # Headers/footers
+            "breadcrumb", "sidebar", "cookie policy", "privacy policy", "copyright",
+            "all rights reserved", "terms of use", "disclaimer",
+            # UI elements
+            "close", "share", "link copied", "clipboard"
+        ]
+        
+        for line in lines:
+            line = line.strip()
+            
+            # Skip empty lines
+            if not line:
+                continue
+            
+            # Skip lines with these patterns
+            if any(pattern.lower() in line.lower() for pattern in skip_patterns):
+                continue
+            
+            # Remove image tags and alt text patterns
+            if line.startswith('![') or line.startswith('<img') or '](' in line and any(ext in line for ext in ['.png', '.jpg', '.gif', '.svg']):
+                continue
+                
+            # Skip lines starting with common navigation markers
+            if line.startswith('*') and len(line) < 100 and '[' in line and ']' in line:
+                continue
+            
+            # Skip links that are likely navigation
+            if line.startswith('[') and '](' in line and len(line) < 80:
+                continue
+                
+            # Skip lines that are just navigation or UI elements
+            if line.lower() in ['home', 'about', 'contact', 'news', 'services', 'faq', 'help']:
+                continue
+                
+            # Skip lines with only special characters, numbers, or very short text
+            if len(line) < 20 or all(c.isdigit() or c in '-|>/\\.' for c in line.replace(' ', '')):
+                continue
+            
+            # If we see patterns that indicate the start of main content, mark as in main content
+            if any(starter in line.lower() for starter in ['introduction', 'abstract', 'summary', 'overview']):
+                in_main_content = True
+            
+            # Add line to cleaned content
+            cleaned_lines.append(line)
+        
+        # Rejoin and extract meaningful paragraphs
+        cleaned_content = '\n'.join(cleaned_lines)
+        
+        # Remove HTML tags if any remain
+        cleaned_content = re.sub(r'<[^>]+>', '', cleaned_content)
+        # Remove markdown links but keep the text
+        cleaned_content = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', cleaned_content)
+        # Remove remaining URLs
+        cleaned_content = re.sub(r'https?://\S+', '', cleaned_content)
+        
+        # Find paragraphs (text blocks with substantial content)
+        paragraphs = []
+        current_paragraph = []
+        
+        for line in cleaned_lines:
+            if len(line) > 50:  # Likely a substantial content line
+                current_paragraph.append(line)
+            else:
+                if current_paragraph and len(' '.join(current_paragraph)) > 100:
+                    paragraphs.append(' '.join(current_paragraph))
+                current_paragraph = []
+        
+        # Don't forget the last paragraph
+        if current_paragraph and len(' '.join(current_paragraph)) > 100:
+            paragraphs.append(' '.join(current_paragraph))
+        
+        # Return the first few substantial paragraphs or cleaned content
+        if paragraphs:
+            return '\n\n'.join(paragraphs[:5])  # First 5 substantial paragraphs
+        else:
+            # Fallback: return cleaned content if no substantial paragraphs found
+            return cleaned_content[:2000] if len(cleaned_content) > 100 else ""
     
-    def _calculate_trust_score(self, url: str) -> int:
-        """Calculate trust score based on domain"""
+    def _calculate_trust_score(self, url: str) -> float:
+        """Calculate trust score for a URL - use softer scoring instead of hard filtering"""
         if not url:
-            return 5
+            return 0.5
         
         domain = urlparse(url).netloc.lower()
         
         # High trust domains
-        high_trust = ['gov', 'edu', 'europa.eu', 'who.int', 'nist.gov']
-        if any(ht in domain for ht in high_trust):
-            return 9
+        if any(trusted in domain for trusted in ['.gov', '.edu', 'europa.eu', 'who.int', 'nist.gov', 'nasa.gov', 'nature.com', 'acm.org']):
+            return 1.0
         
-        # Medium trust domains
-        medium_trust = ['reuters.com', 'bbc.com', 'nature.com']
-        if any(mt in domain for mt in medium_trust):
-            return 7
+        # Medium-high trust
+        if any(medium in domain for medium in ['reuters.com', 'bbc.com', 'oecd.org', 'wikipedia.org']):
+            return 0.9
         
-        # Default trust
-        return 5
+        # Medium trust
+        if any(ok in domain for ok in ['.org', '.com']):
+            return 0.7
+        
+        # Lower trust but not blocked
+        if any(lower in domain for lower in ['blog', 'press']):
+            return 0.4
+        
+        # Default moderate trust
+        return 0.6
     
     def _calculate_freshness_score(self, published_date: Optional[str]) -> float:
         """Calculate freshness score based on publication date"""
@@ -358,22 +477,59 @@ class DocumentIndexer:
             return 0.5  # Unknown date gets neutral score
         
         try:
-            # Parse date (implementation depends on date format)
-            # For now, return a placeholder calculation
-            days_old = 30  # Placeholder
-            max_days = settings.FRESHNESS_DAYS
+            # Parse date (assuming ISO format or common formats)
+            from dateutil import parser
+            pub_date = parser.parse(published_date)
             
-            if days_old <= 7:
+            # Calculate age in days
+            age_days = (datetime.utcnow() - pub_date.replace(tzinfo=None)).days
+            
+            # Fresher content gets higher scores
+            if age_days <= 30:
                 return 1.0
-            elif days_old <= 30:
+            elif age_days <= 90:
                 return 0.8
-            elif days_old <= max_days:
+            elif age_days <= 365:
                 return 0.6
+            elif age_days <= 730:
+                return 0.4
             else:
-                return 0.3
-        
+                return 0.2
+                
         except Exception:
-            return 0.5
+            return 0.5  # Default for unparseable dates
+    
+    def extract_evidence_from_document(self, document: str) -> List[Evidence]:
+        """Extract evidence from a local document"""
+        evidence_list = []
+        
+        try:
+            # For now, treat the whole document as one piece of evidence
+            # Could be enhanced to extract specific claims
+            citation = Citation(
+                id=f"L{len(evidence_list) + 1}",
+                type=CitationType.LOCAL,
+                url=f"local://{document}",
+                title=document,
+                excerpt=document[:200] + "..." if len(document) > 200 else document,
+                confidence=0.9,
+                timestamp=datetime.utcnow(),
+                trust_score=0.9  # Local documents are trusted
+            )
+            
+            evidence = Evidence(
+                text=document,
+                citations=[citation],
+                confidence=0.9,
+                topic_relevance=1.0
+            )
+            
+            evidence_list.append(evidence)
+            
+        except Exception as e:
+            logger.warning(f"Failed to extract evidence from document: {e}")
+        
+        return evidence_list
 
 # Singleton instance
 _indexer = None

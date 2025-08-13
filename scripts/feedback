@@ -1,0 +1,131 @@
+Good news: your stack is fine now. The reason you’re still getting **0 claims** is a data path issue in the Researcher step:
+
+* Tavily returns results ✅
+* Your fetch/clean step yields **no usable snippets** (either blocked by your domain policy, or HTTP fetch returns 403/empty)
+* With 0 snippets, your claim builder produces 0 claims → fallback text
+
+Here’s a tight set of fixes you can drop in to make it work today.
+
+---
+
+## 1) Use Tavily’s raw content (skip most scraping pain)
+
+In your Tavily call, request raw page text so you don’t rely on your scraper for the MVP.
+
+**`app/deps.py` (or wherever you call Tavily)**
+
+```python
+results = tavily.search(
+    query=q,
+    max_results=12,
+    search_depth="advanced",
+    include_raw_content=True,   # <— ADD THIS
+    include_answer=False,
+    include_images=False,
+    include_domains=[
+        "ipcc.ch","un.org","nasa.gov","noaa.gov","wri.org",
+        "who.int","europa.eu","nature.com","science.org","reuters.com","bbc.com","wikipedia.org",
+    ],
+)
+```
+
+Then in your **researcher/indexer** path, prefer `res["raw_content"]` if present.
+
+---
+
+## 2) Stop hard-dropping domains (downweight instead)
+
+You’re still “Skipping blocked domain…” and tossing good pages.
+
+**`app/retrieval/indexer.py` (or wherever you filter)**
+
+**Replace:**
+
+```python
+if is_blocked(url):
+    logger.debug(f"Skipping blocked domain: {url}")
+    continue
+```
+
+**With (soft trust):**
+
+```python
+trust = 0.8
+if is_blocked(url):         # treat “blocked” as low-trust instead of skip
+    trust = 0.4
+meta["trust"] = trust
+# keep the doc; ranking will downweight it
+```
+
+And **use trust in ranking**:
+
+**`app/retrieval/rank.py`**
+
+```python
+base = 0.5 * dense_sim + 0.3 * bm25 + 0.2 * recency
+score = base * meta.get("trust", 0.6)
+```
+
+---
+
+## 3) Make snippet extraction robust
+
+Prefer Tavily’s `raw_content`; only scrape if missing; and send a real User-Agent to avoid 403s.
+
+**`app/io/scraper.py`**
+
+```python
+import requests
+
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15"
+
+def fetch_text(url, timeout=12):
+    r = requests.get(url, timeout=timeout, headers={"User-Agent": UA}, allow_redirects=True)
+    r.raise_for_status()
+    return r.text
+```
+
+**In the researcher when building snippets:**
+
+```python
+text = res.get("raw_content") or fetch_text(res["url"])
+clean = to_clean_text(text)            # your readability/trafilatura step
+for chunk, span in chunk_text(clean, target_tokens=600):
+    add_snippet(chunk, url=res["url"], meta={..., "trust": meta_trust})
+```
+
+---
+
+## 4) Lower “minimum snippets” threshold & retry once
+
+If your claim builder requires N snippets (e.g., ≥5), loosen it to 2–3 for MVP and add a single relaxed retry.
+
+**`app/agents/researcher.py`**
+
+```python
+MIN_SNIPPETS = 3
+
+snips = collect_snippets(queries)
+if len(snips) < MIN_SNIPPETS:
+    logger.info("Retrying with relaxed policy (no include_domains, allow wiki) ...")
+    snips = collect_snippets(relaxed_queries, relaxed=True)
+```
+
+---
+
+## 5) Always populate Bundle fields; guard on empty
+
+You already added a fallback, keep it—and make sure `Bundle(topic, query, ...)` is set:
+
+```python
+bundle = Bundle.model_validate({
+    "topic": topic,
+    "query": queries[0],
+    **research_output.model_dump(),
+})
+
+if not bundle.claims:
+    return persona.default_unknown
+```
+
+---

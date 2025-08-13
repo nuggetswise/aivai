@@ -4,6 +4,18 @@ from datetime import datetime
 from enum import Enum
 import uuid
 
+class SourceDoc(BaseModel):
+    """Document source with content and metadata"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    url: Optional[str] = None
+    title: str 
+    content: str
+    source_type: str = Field(default="web")  # web, local, reference
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    embedding_id: Optional[str] = None
+    trust_score: int = Field(default=5, ge=0, le=10)
+
 class CitationType(str, Enum):
     """Types of citations"""
     WEB = "web"  # [S#] - web source
@@ -66,7 +78,7 @@ class Citation(BaseModel):
     excerpt: Optional[str] = None
     confidence: float = Field(1.0, ge=0.0, le=1.0)
     timestamp: Optional[datetime] = None
-    trust_score: Optional[int] = Field(None, ge=0, le=10)
+    trust_score: Optional[float] = Field(None, ge=0.0, le=10.0)  # Accept float trust scores
 
 class Evidence(BaseModel):
     """Single piece of evidence with citations and metadata"""
@@ -110,6 +122,39 @@ class Turn(BaseModel):
             raise ValueError('avatar_key must be A1 or A2')
         return v
 
+class EmotionType(str, Enum):
+    NEUTRAL = "neutral"
+    CONFIDENT = "confident"
+    QUESTIONING = "questioning"
+    SURPRISED = "surprised"
+    EMPHATIC = "emphatic"
+    CAUTIOUS = "cautious"
+    CONCERNED = "concerned"
+    EXCITED = "excited"
+    THOUGHTFUL = "thoughtful"
+    AMUSED = "amused"
+    SERIOUS = "serious"
+
+class TextSpan(BaseModel):
+    """A span of text with emotional annotation"""
+    start: int
+    end: int
+    text: str
+    emotion: EmotionType = EmotionType.NEUTRAL
+    intensity: float = Field(1.0, ge=0.0, le=1.0)
+
+class RichText(BaseModel):
+    """Rich text with emotional annotations"""
+    plain_text: str
+    spans: List[TextSpan] = []
+
+    def to_json(self) -> Dict[str, Any]:
+        """Convert to JSON format for frontend rendering"""
+        return {
+            "text": self.plain_text,
+            "spans": [span.dict() for span in self.spans]
+        }
+
 class EpisodeConfig(BaseModel):
     """Configuration for a debate episode"""
     topic: str
@@ -121,6 +166,8 @@ class EpisodeConfig(BaseModel):
     freshness_days: int = Field(default=120)
     whitelist_domains: List[str] = Field(default_factory=list)
     blacklist_domains: List[str] = Field(default_factory=list)
+    phases: List[Phase] = Field(default_factory=list)
+    max_duration_seconds: int = Field(default=600)  # 10 minutes
 
 class Episode(BaseModel):
     """Complete debate episode with all turns and metadata"""

@@ -98,25 +98,40 @@ class ResearcherAgent:
     
     def _build_search_queries(self, research_input: ResearcherInput) -> List[str]:
         """Build search queries based on topic, intent, and opponent context"""
-        queries = [research_input.topic]  # Base query
+        topic = research_input.topic
+        
+        # Use varied query templates without hardcoded domain restrictions
+        queries = [
+            f"{topic}",  # Simple base query
+            f"{topic} recent developments",
+            f"{topic} current research",
+            f"{topic} key measures OR policy brief OR framework",
+            f"{topic} case studies OR examples OR implementation"
+        ]
         
         # Add intent-specific queries
         if research_input.intent == TurnIntent.REBUTTAL and research_input.opponent_point:
-            # For rebuttals, search for counter-evidence
-            queries.append(f"{research_input.topic} counter arguments")
-            queries.append(f"criticism {research_input.topic}")
+            # For rebuttals, search for counter-evidence without domain restrictions
+            queries.extend([
+                f"{topic} criticism OR limitations OR challenges",
+                f"counter arguments {topic} OR debate OR controversy"
+            ])
         
         elif research_input.intent == TurnIntent.OPENING:
-            # For openings, search for overview and definitions
-            queries.append(f"{research_input.topic} overview")
-            queries.append(f"what is {research_input.topic}")
+            # For openings, search for overview and definitions without domain restrictions
+            queries.extend([
+                f"{topic} overview OR definition OR introduction",
+                f"what is {topic} OR introduction OR basics"
+            ])
         
         elif research_input.intent == TurnIntent.POSITIONING:
-            # For positioning, search for specific evidence and studies
-            queries.append(f"{research_input.topic} evidence studies")
-            queries.append(f"{research_input.topic} research findings")
+            # For positioning, search for specific evidence and studies without domain restrictions
+            queries.extend([
+                f"{topic} evidence OR studies OR research findings",
+                f"{topic} data OR statistics OR report"
+            ])
         
-        return queries[:3]  # Limit to 3 queries max
+        return queries[:5]  # Limit to 5 queries max for MVP
     
     def _gather_web_evidence(self, queries: List[str]) -> List[Evidence]:
         """Gather evidence from web search"""
@@ -135,28 +150,16 @@ class ResearcherAgent:
         return all_evidence
     
     def _gather_local_evidence(self, research_input: ResearcherInput) -> List[Evidence]:
-        """Gather evidence from local corpus"""
-        if not research_input.local_corpus:
-            return []
-        
+        """Gather evidence from local corpus based on user-uploaded documents"""
         evidence_list = []
         
         try:
-            # Search local corpus using vector similarity
-            bundle = self.ranker.rank_evidence_for_query(
-                research_input.topic,
-                max_results=8,
-                filters={'min_trust_score': 6}  # Local corpus should be trusted
-            )
-            
-            # Filter for local sources only
-            for evidence in bundle.claims:
-                if evidence.citations and any(
-                    'file://' in cite.url or cite.type.value == 'local' 
-                    for cite in evidence.citations
-                ):
-                    evidence_list.append(evidence)
-                    
+            # Iterate over each document in the local corpus
+            for document in research_input.local_corpus:
+                # Extract relevant evidence using the indexer
+                extracted_evidence = self.indexer.extract_evidence_from_document(document)
+                evidence_list.extend(extracted_evidence)
+                
         except Exception as e:
             logger.warning(f"Local corpus search failed: {e}")
         
@@ -167,21 +170,36 @@ class ResearcherAgent:
         if not evidence_list:
             return ["No evidence found for this topic"]
         
+        # Load researcher prompt template
+        try:
+            with open("app/prompts/researcher.txt", "r") as f:
+                researcher_prompt = f.read()
+        except FileNotFoundError:
+            researcher_prompt = "You are a fact-only researcher."
+        
         # Prepare evidence summary for LLM
         evidence_texts = [e.text[:200] for e in evidence_list[:10]]  # Limit for context
         evidence_summary = "\n".join([f"- {text}" for text in evidence_texts])
         
-        # LLM prompt to identify omissions
+        # Enhanced prompt with source quality awareness
         messages = [
             {
                 "role": "system",
-                "content": """You are a fact-checking researcher. Given a topic and collected evidence, identify 2-3 key aspects or questions that are missing from the evidence.
+                "content": f"""{researcher_prompt}
+
+Given a topic and collected evidence, identify 2-3 key aspects or questions that are missing from the evidence.
 
 Focus on:
-- Important perspectives not covered
-- Key data points that would be expected
-- Critical context that's absent
-- Methodological gaps
+- Important perspectives not covered by credible sources
+- Key data points from government/academic sources that would be expected
+- Critical context from established institutions that's absent
+- Areas where only low-quality sources were found (blogs, press releases)
+
+Prioritize gaps that could be filled by:
+- Government agencies (.gov, .edu)
+- Peer-reviewed research
+- Established news organizations
+- International organizations (WHO, UN, OECD)
 
 Be specific and factual. Each omission should be 1-2 sentences."""
             },
@@ -190,10 +208,10 @@ Be specific and factual. Each omission should be 1-2 sentences."""
                 "content": f"""Topic: {research_input.topic}
 Intent: {research_input.intent.value}
 
-Evidence collected:
+Evidence collected from sources:
 {evidence_summary}
 
-What key omissions or gaps do you identify in this evidence?"""
+What key omissions or gaps do you identify in this evidence? Focus on areas where we lack credible, authoritative sources."""
             }
         ]
         

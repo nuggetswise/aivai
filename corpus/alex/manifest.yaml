@@ -1,0 +1,90 @@
+# Manifest file for Skeptic avatar corpus
+# This defines the corpus sources, preferred domains, and content biases
+
+avatar_name: Skeptic
+avatar_path: avatars/alex.yaml
+
+# Source categorization
+sources:
+  academic: 45     # Percentage of academic sources (increased from 60%)
+  news: 20         # Percentage of news sources
+  tech: 20         # Percentage of tech blogs/reports
+  historical: 10   # Percentage of historical archives and case studies
+  other: 5         # Percentage of other sources
+
+# Domain preferences (higher weight = more preferred)
+preferred_domains:
+  - domain: "*.edu"
+    weight: 10
+  - domain: "*.gov"
+    weight: 9
+  - domain: "nature.com"
+    weight: 9
+  - domain: "science.org"
+    weight: 9
+  - domain: "ieee.org"
+    weight: 8
+  - domain: "acm.org"
+    weight: 8
+  - domain: "arxiv.org"
+    weight: 8
+  - domain: "jstor.org"
+    weight: 7
+  - domain: "ssrn.com"
+    weight: 7
+  - domain: "ncbi.nlm.nih.gov"
+    weight: 7
+  - domain: "scholar.google.com"
+    weight: 7
+  - domain: "springer.com"
+    weight: 7
+  - domain: "researchgate.net"
+    weight: 6
+  - domain: "sciencedirect.com"
+    weight: 6
+
+# Corpus metadata
+last_updated: "2025-08-01"
+source_count: 25
+topics:
+  - AI Safety
+  - Machine Learning
+  - Technology Ethics
+  - Computer Science
+  - Data Science
+  - Policy
+  - Philosophy of Mind
+  - Cognitive Science
+  - Historical precedents in technology adoption
+  - Longitudinal studies of tech impact
+  - Case studies of technology regulation
+  - Academic perspectives on AI governance
+
+# Content biases (used to inform commentator behavior)
+biases:
+  - "Prefers evidence-based arguments over appeals to emotion"
+  - "Tends to cite academic sources more frequently"
+  - "Emphasizes scientific consensus over individual opinions"
+  - "Presents balanced perspectives on complex issues"
+  - "Values precision of language and clear definitions"
+  - "Contextualizes current developments within historical patterns"
+  - "Seeks precedent before making claims about novelty"
+  - "Prioritizes methodological rigor over anecdotal evidence"
+  - "Maintains skepticism toward unproven claims"
+
+# Grounding rules
+grounding_rules:
+  - "Always consider historical precedents when evaluating new claims"
+  - "Require peer-reviewed sources for factual claims when possible"
+  - "Cite multiple sources to establish consensus views"
+  - "Compare current situations to analogous historical cases"
+  - "Consider long-term implications based on historical patterns"
+
+# Notes about this corpus
+notes: >
+  Skeptic's corpus is focused on academic and scientific sources, with an emphasis 
+  on historical precedent, longitudinal analysis, and rigorous evidence. The corpus 
+  provides deep context spanning decades of research and analysis, enabling 
+  Skeptic to place current AI developments within broader historical, philosophical, 
+  and scientific traditions. The avatar excels at identifying patterns from the past
+  that might inform current discussions and policy decisions.

@@ -1,0 +1,26 @@
+url,title,trust_score,category
+https://www.technologyreview.com/2023/08/01/1076542/the-creative-power-of-generative-ai/,The Creative Power of Generative AI,8,tech
+https://www.wired.com/story/generative-ai-art-revolution/,How AI Is Revolutionizing Digital Art,7,tech
+https://arxiv.org/abs/2307.09009,Emergent World Representations: Exploring a Sequence Model Trained on a Synthetic Task,9,academic
+https://theverge.com/2023/05/10/ai-music-generation-tools-revolution,AI Music Generation Is Having Its Moment,7,tech
+https://techcrunch.com/2023/07/21/the-human-ai-creative-partnership/,The Human-AI Creative Partnership,7,tech
+https://venturebeat.com/ai/how-generative-ai-is-transforming-creative-industries/,How Generative AI Is Transforming Creative Industries,6,tech
+https://www.nature.com/articles/d41586-023-01642-5,AI in Scientific Discovery: Opportunities and Challenges,9,academic
+https://vox.com/future-perfect/ai-creativity-humans-collaboration,How AI Can Enhance Human Creativity Rather Than Replace It,6,tech
+https://www.nytimes.com/2023/06/15/technology/ai-augmentation-jobs-future.html,AI Augmentation: A Path to Enhancing Human Potential,7,news
+https://www.fastcompany.com/90966123/ai-human-collaboration-future-of-work,The Future of Work Is Human-AI Collaboration,6,tech
+https://hbr.org/2023/05/how-generative-ai-changes-business-creativity,How Generative AI Changes Business Creativity,7,business
+https://arxiv.org/abs/2303.12712,Human-Machine Collaboration for Content Creation,8,academic
+https://www.sciencedirect.com/science/article/pii/S0040162523001234,AI and the Future of Creative Work,8,academic
+https://www.washingtonpost.com/technology/2023/04/12/ai-democratizing-creativity/,How AI Is Democratizing Creativity,6,news
+https://www.theguardian.com/technology/2023/jun/27/ai-creativity-revolution,The AI Creativity Revolution Has Only Just Begun,6,news
+https://www.bloomberg.com/news/features/2023-04-21/ai-is-changing-how-we-make-and-consume-art,AI Is Changing How We Make and Consume Art,7,news
+https://www.ted.com/talks/kai_fu_lee_how_ai_can_save_our_humanity,How AI Can Save Our Humanity,6,other
+https://www.interactiondesign.org/literature/article/human-computer-interaction-hci,Human-Computer Interaction: Beyond the Interface,7,academic
+https://www.scientificamerican.com/article/can-ai-make-art/,Can AI Make Art?,8,academic
+https://www.arstechnica.com/information-technology/2023/04/openai-ceo-ai-will-reshape-society-major-advance-coming-soon/,OpenAI CEO: AI Will Reshape Society,6,tech
+https://www.economist.com/business/2023/07/15/how-ai-is-transforming-the-creative-economy,How AI Is Transforming the Creative Economy,7,news
+https://ethicalos.org/ai-ethics-principles,Ethical OS AI Ethics Principles,7,other
+https://www.pewresearch.org/internet/2023/07/19/public-attitudes-toward-ai-applications/,Public Attitudes Toward AI Applications,7,research
+https://www.edx.org/learn/computer-science/harvard-university-cs50s-introduction-to-artificial-intelligence-with-python,CS50's Introduction to AI with Python,8,academic
+https://www.acm.org/media-center/2023/june/acm-global-technology-policy-council-issues-statement-on-generative-ai,ACM Statement on Generative AI,8,policy

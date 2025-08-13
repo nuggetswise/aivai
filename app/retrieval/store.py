@@ -25,7 +25,14 @@ class VectorStore:
         os.makedirs(os.path.dirname(self.index_path), exist_ok=True)
         os.makedirs(os.path.dirname(self.metadata_db_path), exist_ok=True)
         
-        self.dimension = 1536  # text-embedding-3-small dimension
+        # Get dimension from embeddings client
+        from app.deps import get_embeddings_client
+        embeddings_client = get_embeddings_client()
+        # Test with a small sample to get dimension
+        test_embedding = embeddings_client.embed(["test"])
+        self.dimension = len(test_embedding[0])
+        logger.info(f"Using embedding dimension: {self.dimension}")
+        
         self.index = None
         self.metadata_conn = None
         
@@ -35,11 +42,25 @@ class VectorStore:
     def _initialize_index(self):
         """Initialize or load FAISS index"""
         if os.path.exists(self.index_path):
-            logger.info(f"Loading existing FAISS index from {self.index_path}")
-            self.index = faiss.read_index(self.index_path)
+            try:
+                logger.info(f"Loading existing FAISS index from {self.index_path}")
+                existing_index = faiss.read_index(self.index_path)
+                
+                # Check if dimensions match
+                if existing_index.d != self.dimension:
+                    logger.warning(f"Dimension mismatch: existing index has {existing_index.d}, need {self.dimension}. Recreating index.")
+                    os.remove(self.index_path)
+                    self.index = faiss.IndexFlatIP(self.dimension)
+                else:
+                    self.index = existing_index
+                    logger.info(f"Loaded existing index with {self.index.ntotal} vectors")
+            except Exception as e:
+                logger.warning(f"Failed to load existing index: {e}. Creating new index.")
+                if os.path.exists(self.index_path):
+                    os.remove(self.index_path)
+                self.index = faiss.IndexFlatIP(self.dimension)
         else:
-            logger.info("Creating new FAISS index")
-            # Use IndexFlatIP for cosine similarity (after L2 normalization)
+            logger.info(f"Creating new FAISS index with dimension {self.dimension}")
             self.index = faiss.IndexFlatIP(self.dimension)
     
     def _initialize_metadata_db(self):

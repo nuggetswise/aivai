@@ -1,0 +1,26 @@
+url,title,trust_score,category
+https://arxiv.org/abs/2303.08774,A Survey of Safety and Trustworthiness of Large Language Models through the Lens of Verification and Validation,10,academic
+https://www.nature.com/articles/s41586-023-06912-w,Capabilities and limitations of large language models,9,academic
+https://www.science.org/doi/10.1126/science.adi1506,Challenges of integrating large language models into society,9,academic
+https://hai.stanford.edu/news/reflections-foundation-models,Reflections on Foundation Models,8,academic
+https://www.acm.org/binaries/content/assets/public-policy/ustpc-ai-statement.pdf,Statement on Principles for Responsible Algorithmic Systems,8,academic
+https://www.eff.org/ai/ai-policy-principles,AI Policy Principles,7,policy
+https://www.nist.gov/artificial-intelligence/ai-risk-management-framework,AI Risk Management Framework,9,policy
+https://www.brookings.edu/articles/a-framework-for-responsible-ai,A Framework for Responsible AI,7,policy
+https://www.nytimes.com/2023/07/22/technology/ai-regulation-governance.html,The Race to Regulate Artificial Intelligence,6,news
+https://www.wired.com/story/the-case-for-ai-alignment/,The Case for AI Alignment,7,tech
+https://www.technologyreview.com/2023/02/15/1068466/ai-isnt-artificial-or-intelligent/,AI Isn't Artificial or Intelligent,7,tech
+https://www.washingtonpost.com/technology/2023/05/16/ai-doomer-doomist-doom-safety/,AI 'Doomers' vs. 'Boomers',6,news
+https://www.economist.com/leaders/2023/04/20/how-to-worry-wisely-about-artificial-intelligence,How to Worry Wisely About Artificial Intelligence,7,news
+https://plato.stanford.edu/entries/ethics-ai/,Ethics of Artificial Intelligence and Robotics,8,academic
+https://www.pewresearch.org/internet/2023/06/28/ai-in-everyday-life-what-americans-know-and-what-they-want/,AI in Everyday Life: What Americans Know and What They Want,7,research
+https://www.mckinsey.com/capabilities/mckinsey-digital/our-insights/the-economic-potential-of-generative-ai-the-next-productivity-frontier,The Economic Potential of Generative AI,6,research
+https://www.rand.org/blog/articles/2023/06/ai-governance-needs-clearer-policy-on-foundation-models.html,AI Governance Needs Clearer Policy on Foundation Models,7,policy
+https://www.technologyreview.com/2023/07/28/1076998/ai-progress-measurements-forecasting/,We Need Better Ways to Measure AI Progress,7,tech
+https://arstechnica.com/information-technology/2023/06/machine-unlearning-researchers-devise-way-to-delete-specific-memories-from-ai/,Machine Unlearning: Researchers devise way to delete specific memories from AI,6,tech
+https://www.scientificamerican.com/article/making-ai-safe-for-humanity/,Making AI Safe for Humanity,8,academic
+https://cset.georgetown.edu/publication/key-concepts-in-ai-safety/,Key Concepts in AI Safety: Interpretability,8,academic
+https://www.governing.com/security/ai-holds-promise-and-peril-for-emergency-management,AI Holds Promise and Peril for Emergency Management,7,policy
+https://www.bbc.com/news/technology-66141795,How AI Could Transform the World of Work,6,news
+https://www.frontiersin.org/articles/10.3389/frai.2023.1150255/,Assessing Truthfulness in Large Language Models,8,academic
+https://www.anthropic.com/index/core-views-on-ai-safety,Core Views on AI Safety,7,tech

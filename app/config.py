@@ -8,21 +8,28 @@ class Settings:
     # Reasoning LLM (for complex reasoning tasks like persona generation)
     REASONING_MODEL: str = os.getenv("REASONING_MODEL", "gemini-2.0-flash-exp")
     REASONING_API_KEY: str = os.getenv("REASONING_API_KEY", "")
-    REASONING_BASE_URL: str = os.getenv("REASONING_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
+    REASONING_BASE_URL: str = os.getenv("REASONING_BASE_URL", "https://generativelanguage.googleapis.com/v1beta")
     
     # Basic LLM (for simpler tasks like verification, style adjustment)
     BASIC_MODEL: str = os.getenv("BASIC_MODEL", "gemini-2.0-flash-exp")
     BASIC_API_KEY: str = os.getenv("BASIC_API_KEY", "")
-    BASIC_BASE_URL: str = os.getenv("BASIC_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
+    BASIC_BASE_URL: str = os.getenv("BASIC_BASE_URL", "https://generativelanguage.googleapis.com/v1beta")
     
     # Vision-Language LLM (for tasks involving images)
     VL_MODEL: str = os.getenv("VL_MODEL", "gemini-2.0-flash-exp")
     VL_API_KEY: str = os.getenv("VL_API_KEY", "")
-    VL_BASE_URL: str = os.getenv("VL_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
+    VL_BASE_URL: str = os.getenv("VL_BASE_URL", "https://generativelanguage.googleapis.com/v1beta")
+    
+    # Gemini API Key (fallback for all Gemini models)
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     
     # Legacy/Fallback LLM Configuration
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    
+    # Embeddings Configuration
+    EMBEDDINGS_BACKEND: str = os.getenv("EMBEDDINGS_BACKEND", "hf")  # "hf" or "google"
+    EMBEDDINGS_MODEL: str = os.getenv("EMBEDDINGS_MODEL", "intfloat/e5-small-v2")  # HF model or "models/text-embedding-004" for Google
     
     # Search and Retrieval APIs
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
@@ -32,6 +39,7 @@ class Settings:
     # TTS Configuration
     DIA_TTS_MODEL: str = os.getenv("DIA_TTS_MODEL", "nari-labs/dia")
     TTS_VENDOR: str = os.getenv("TTS_VENDOR", "dia")
+    TTS_ENABLED: bool = os.getenv("TTS_ENABLED", "true").lower() == "true"
     
     # Data and Storage Paths
     DATA_DIR: str = os.getenv("DATA_DIR", "data")

@@ -236,14 +236,14 @@ The API server exposes the following endpoints:
 
 ### Advanced Configuration
 
-LangManus can be customized through various configuration files in the `src/config` directory:
-- `env.py`: Configure LLM models, API keys, and base URLs
-- `tools.py`: Adjust tool-specific settings (e.g., Tavily search results limit)
-- `agents.py`: Modify team composition and agent system prompts
+LangManus can be customized through various configuration files in the `app` directory:
+- `app/config.py`: Configure LLM models, API keys, and base URLs
+- `app/agents/`: Adjust agent-specific settings and behaviors
+- `app/orchestrator/`: Modify team composition and workflow management
 
 ### Agent Prompts System
 
-LangManus uses a sophisticated prompting system in the `src/prompts` directory to define agent behaviors and responsibilities:
+LangManus uses a sophisticated prompting system in the `app/prompts` directory to define agent behaviors and responsibilities:
 
 #### Core Agent Roles
 

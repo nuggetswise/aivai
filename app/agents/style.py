@@ -23,40 +23,158 @@ class StyleAgent:
     
     def apply_style(self, style_input: StyleInput) -> StyleOutput:
         """
-        Apply persona-specific styling to verified text without changing facts.
+        Apply persona-specific style to verified text.
         
         Args:
             style_input: StyleInput with verified_text and persona
             
         Returns:
-            StyleOutput with styled_text
+            StyleOutput with styled text
         """
-        logger.info(f"Applying style for {style_input.persona.name}")
+        logger.info(f"Styling text for {style_input.persona.name}")
         
         try:
-            # Step 1: Preserve citations and factual content
-            citations_preserved = self._preserve_citations(style_input.verified_text)
+            # Step 1: Load style prompt
+            with open("app/prompts/style.txt", "r") as f:
+                style_prompt = f.read()
+        except FileNotFoundError:
+            style_prompt = "You are a style specialist."
+        
+        # Step 2: Replace persona variables in prompt template
+        prompt = style_prompt
+        for field in ["name", "role", "tone", "speech_quirks"]:
+            value = getattr(style_input.persona, field)
+            if isinstance(value, list):
+                value = ", ".join(value)
+            replacement = f"{{{{persona.{field}}}}}"
+            prompt = prompt.replace(replacement, str(value))
+        
+        # Step 3: Generate styled text
+        messages = [
+            {
+                "role": "system",
+                "content": prompt
+            },
+            {
+                "role": "user",
+                "content": f"""Here is the verified debate text that needs styling and emotional expressions:
+
+```
+{style_input.verified_text}
+```
+
+IMPORTANT GUIDELINES:
+1. Preserve ALL factual content and citations exactly as written
+2. Add natural emotional expressions like (thoughtful), (pause), (chuckle), etc.
+3. Aim to include 3-4 emotional expressions distributed through the text
+4. Refine the style to match {style_input.persona.name}'s voice
+5. The emotions should match the content and the persona's character
+
+Return the styled text that incorporates the persona's speech patterns and appropriate emotional expressions.
+"""
+            }
+        ]
+        
+        styled_text = self.llm.generate(
+            messages,
+            temperature=0.7,  # Higher temperature for creative styling
+            max_tokens=2000
+        )
+        
+        # Remove any unwanted formatting or explanations
+        styled_text = self._clean_output(styled_text)
+        
+        # Ensure we have emotional annotations
+        styled_text = self._ensure_emotional_annotations(styled_text, style_input.persona)
+        
+        logger.info("Styling complete")
+        
+        return StyleOutput(
+            styled_text=styled_text
+        )
+    
+    def _clean_output(self, text: str) -> str:
+        """Clean up the output text by removing unwanted markers and formatting"""
+        # Remove markdown code blocks
+        text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+        
+        # Remove explanatory headers/footers
+        text = re.sub(r'^(Here is|I\'ve styled|The styled text|Styled text:).*?\n', '', text)
+        text = re.sub(r'\n(Note:|As requested|I\'ve preserved|I made sure).*?$', '', text)
+        
+        return text.strip()
+    
+    def _ensure_emotional_annotations(self, text: str, persona: Persona) -> str:
+        """Ensure the text has emotional annotations, add if missing"""
+        # Check if text already has emotions
+        emotion_pattern = r'\([a-z\s]+\)'
+        emotions = re.findall(emotion_pattern, text)
+        
+        # If emotions are already present, return as is
+        if len(emotions) >= 2:
+            return text
+        
+        # If no emotions, add some based on persona and content
+        logger.warning("No emotional annotations found in styled text, adding defaults")
+        
+        # Split into paragraphs
+        paragraphs = text.split("\n\n")
+        if len(paragraphs) < 2:
+            paragraphs = text.split(".")
+        
+        # Customize emotions based on persona
+        if persona.name.lower() == "nova rivers" or "passionate" in persona.tone.lower():
+            # Nova-specific emotions based on her passionate, technical style
+            if not re.search(emotion_pattern, paragraphs[0]):
+                paragraphs[0] = f"(confident) {paragraphs[0]}"
             
-            # Step 2: Apply persona-specific styling
-            styled_text = self._apply_persona_styling(
-                style_input.verified_text, 
-                style_input.persona,
-                citations_preserved
-            )
+            # Add technical enthusiasm in middle sections
+            if len(paragraphs) > 1 and not re.search(emotion_pattern, paragraphs[1]):
+                sentences = paragraphs[1].split(".")
+                if len(sentences) > 2:
+                    mid_idx = len(sentences) // 2
+                    sentences[mid_idx] = f"{sentences[mid_idx]} (enthusiastic)"
+                    paragraphs[1] = ".".join(sentences)
             
-            # Step 3: Validate that facts and citations remain intact
-            if not self._validate_preservation(style_input.verified_text, styled_text):
-                logger.warning("Style application may have altered facts, reverting to original")
-                styled_text = style_input.verified_text
+            # Add emphasis at the end
+            if len(paragraphs) > 2 and not re.search(emotion_pattern, paragraphs[-1]):
+                if "furthermore" in paragraphs[-1].lower():
+                    paragraphs[-1] = paragraphs[-1].replace("Furthermore", "(passionate) Furthermore")
+                else:
+                    paragraphs[-1] = f"(serious tone) {paragraphs[-1]}"
             
-            logger.info(f"Style applied: {len(styled_text)} characters")
+            return "\n\n".join(paragraphs)
             
-            return StyleOutput(styled_text=styled_text)
+        else:
+            # Generic emotion handling for other personas (e.g., Alex)
+            # For first paragraph, add at beginning or end
+            if not re.search(emotion_pattern, paragraphs[0]):
+                if persona.tone.lower() in ["thoughtful", "analytical", "academic"]:
+                    paragraphs[0] = f"(thoughtful) {paragraphs[0]}"
+                else:
+                    end_sent = paragraphs[0].split(".")[-2] + "."
+                    paragraphs[0] = paragraphs[0].replace(end_sent, f"{end_sent} (pause)")
             
-        except Exception as e:
-            logger.error(f"Style application failed: {e}")
-            # Return original text on failure
-            return StyleOutput(styled_text=style_input.verified_text)
+            # For middle paragraph, add in middle
+            if len(paragraphs) > 1 and not re.search(emotion_pattern, paragraphs[1]):
+                sentences = paragraphs[1].split(".")
+                if len(sentences) > 2:
+                    mid_idx = len(sentences) // 2
+                    emotion = "serious tone" if "climate" in paragraphs[1].lower() else "thoughtful"
+                    sentences[mid_idx] = f"{sentences[mid_idx]} ({emotion})"
+                    paragraphs[1] = ".".join(sentences)
+            
+            # For last paragraph, add emphasis
+            if len(paragraphs) > 2 and not re.search(emotion_pattern, paragraphs[-1]):
+                if "?" in paragraphs[-1]:
+                    paragraphs[-1] = f"(curious) {paragraphs[-1]}"
+                else:
+                    paragraphs[-1] = f"(confident) {paragraphs[-1]}"
+            
+            return "\n\n".join(paragraphs)
+        
+        # If text structure doesn't allow paragraph-based placement
+        return f"({persona.tone.split(',')[0]}) {text}"
     
     def _preserve_citations(self, text: str) -> Dict[str, str]:
         """Extract and preserve all citations from text"""
