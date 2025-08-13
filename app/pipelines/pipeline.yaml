@@ -1,0 +1,153 @@
+# AI-vs-AI Debate Turn Pipeline (LangManus-style)
+# This YAML scaffolds the multi-agent flow described in app/readmelangmanus and plan3.
+# It is framework-agnostic configuration you can adapt to your runner.
+
+vars:
+  freshness_days: 120
+  whitelist:
+    - europa.eu
+    - nist.gov
+    - oecd.org
+    - who.int
+    - reuters.com
+    - bbc.com
+    - nature.com
+    - acm.org
+    - mit.edu
+    - stanford.edu
+  greylist:
+    - gov.uk
+    - canada.ca
+    - company.com/blog
+  blacklist:
+    - "*-seo-*"
+    - "presswire.*"
+    - "contentfarm.*"
+
+agents:
+  researcher:
+    description: "Gathers factual evidence from web + local corpus for the debate turn"
+    model: basic-llm
+    tools:
+      - name: tavily_search
+        args:
+          num_results: 12
+          freshness_days: "{{ freshness_days }}"
+          whitelist: "{{ whitelist }}"
+          greylist: "{{ greylist }}"
+          blacklist: "{{ blacklist }}"
+      - name: web.fetch
+      - name: html.clean_readability
+    input_schema:
+      type: object
+      properties:
+        topic: { type: string }
+        intent: { type: string }
+        opponent_point: { type: string }
+        local_corpus: { type: array, items: { type: string } }
+    output_schema:
+      type: object
+      properties:
+        claims:
+          type: array
+          items:
+            type: object
+            properties:
+              text: { type: string }
+              citations: { type: array, items: { type: string } }
+              confidence: { type: number }
+        contradictions: { type: array }
+        omissions: { type: array }
+    system_prompt: |
+      You are a fact-only researcher.
+      Use ONLY the provided excerpts from the web and the local seed corpus.
+      Quote or tightly paraphrase; attach [S#] for web and [L#] for local after each claim.
+      Flag contradictions and stale data.
+      Do NOT add opinions.
+
+  commentator:
+    description: "Generates persona-locked debate turn from evidence bundle"
+    model: reasoning-llm
+    temperature: 0.25
+    input_schema:
+      type: object
+      properties:
+        topic: { type: string }
+        phase: { type: string }
+        intent: { type: string }
+        opponent_summary: { type: string }
+        persona: { type: object }
+        evidence_bundle: { type: object }
+    output_schema:
+      type: object
+      properties:
+        text: { type: string }
+        citations: { type: array, items: { type: string } }
+    system_prompt: |
+      You are {{ persona.name }}, a {{ persona.role }}.
+      Speak in {{ persona.tone }} with quirks: {{ persona.speech_quirks | join(", ") }}.
+      Use only the evidence claims provided. No new facts.
+      If unsupported, say: "{{ persona.default_unknown }}".
+      Every factual sentence MUST have a bracketed citation like [S1] or [L2].
+      End with one concise takeaway.
+
+  verifier:
+    description: "Checks factual support for each sentence and fixes or removes unsupported claims"
+    model: basic-llm
+    temperature: 0
+    input_schema:
+      type: object
+      properties:
+        draft: { type: string }
+        evidence_bundle: { type: object }
+        persona: { type: object }
+    output_schema:
+      type: object
+      properties:
+        text: { type: string }
+        citations: { type: array, items: { type: string } }
+    system_prompt: |
+      Validate factual support for each sentence in the draft.
+      If a sentence has wrong or missing citation, minimally edit to match the evidence or replace with "{{ persona.default_unknown }}".
+      Do not add new facts.
+
+  style:
+    description: "Adjusts tone and style to match persona without altering facts or citations"
+    model: basic-llm
+    temperature: 0
+    input_schema:
+      type: object
+      properties:
+        verified_text: { type: string }
+        persona: { type: object }
+    output_schema:
+      type: object
+      properties:
+        styled_text: { type: string }
+    system_prompt: |
+      Adjust only style to fit {{ persona.name }}'s tone and quirks.
+      Do not change facts or citations.
+      Keep all citations intact.
+
+  tts:
+    description: "Synthesizes audio for the final styled text using Dia TTS"
+    model: local
+    run: python app/tts/dia_synth.py --text "{{ styled_text }}" --ref "{{ persona.voice.ref_audio }}" --speaker_tag "{{ persona.voice.speaker_tag }}"
+    input_schema:
+      type: object
+      properties:
+        styled_text: { type: string }
+        persona: { type: object }
+    output_schema:
+      type: object
+      properties:
+        audio_path: { type: string }
+
+pipelines:
+  debate_turn:
+    steps:
+      - agent: researcher
+      - agent: commentator
+      - agent: verifier
+      - agent: style
+      - agent: tts

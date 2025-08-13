@@ -1,0 +1,124 @@
+# Full-episode orchestration for AI-vs-AI debate (LangManus-style)
+# Requires: app/pipelines/pipeline.yaml (debate_turn)
+
+vars:
+  freshness_days: 120
+  rundown:
+    - { name: "opening",   intent: "opening",     sequence: ["A1","A2"] }
+    - { name: "positions", intent: "positioning", sequence: ["A1","A2"] }
+    - { name: "crossfire", intent: "rebuttal",    sequence: ["A2","A1","A2","A1"] }
+    - { name: "closing",   intent: "closing",     sequence: ["A1","A2"] }
+
+inputs:
+  topic: string
+  avatarA_path: string
+  avatarB_path: string
+  episode_id: string
+
+state:
+  transcript: []
+  last_text_by_avatar: {}
+  dialog_summary: ""
+  audio_segments: []
+
+agents:
+  summarizer:
+    description: "Maintains a compact running summary (≤200 tokens)"
+    model: basic-llm
+    temperature: 0.2
+    input_schema:
+      type: object
+      properties:
+        prev_summary: { type: string }
+        new_turn_text: { type: string }
+    output_schema:
+      type: object
+      properties:
+        summary: { type: string }
+    system_prompt: |
+      Summarize the NEW turn into a compact update (≤200 tokens) suitable
+      to brief the next speaker. Keep only essential claims or questions.
+
+  append_transcript:
+    model: local
+    run: python app/io/append_transcript.py --avatar "{{ avatar_key }}" --phase "{{ phase_name }}" --text "{{ text }}" --citations "{{ citations | tojson }}" --audio "{{ audio_path }}"
+
+  mixer:
+    model: local
+    run: python app/io/mix_episode.py --inputs "{{ audio_segments | join(',') }}" --out "data/audio/{{ episode_id }}.mp3"
+
+  notes:
+    model: local
+    run: python app/io/make_notes.py --topic "{{ topic }}" --transcript "data/transcripts/{{ episode_id }}.json" --out "data/notes/{{ episode_id }}.md"
+
+pipelines:
+  episode_run:
+    inputs:
+      topic: string
+      avatarA_path: string
+      avatarB_path: string
+      episode_id: string
+    steps:
+      - set: { persona_A1: "{{ load_yaml(avatarA_path) }}", persona_A2: "{{ load_yaml(avatarB_path) }}" }
+      - set: { dialog_summary: "", transcript: [], audio_segments: [], last_text_by_avatar: {} }
+
+      - foreach:
+          list: "{{ rundown }}"
+          as: phase
+          do:
+            - set: { phase_name: "{{ phase.name }}", intent: "{{ phase.intent }}" }
+
+            - foreach:
+                list: "{{ phase.sequence }}"
+                as: who
+                do:
+                  - set:
+                      persona: "{{ (who == 'A1') ? persona_A1 : persona_A2 }}"
+                      avatar_key: "{{ who }}"
+                      opponent_key: "{{ (who == 'A1') ? 'A2' : 'A1' }}"
+                      opponent_summary: "{{ last_text_by_avatar[opponent_key] | default('') }}"
+
+                  - call: debate_turn
+                    with:
+                      topic: "{{ topic }}"
+                      intent: "{{ intent }}"
+                      opponent_point: "{{ opponent_summary }}"
+                      phase: "{{ phase_name }}"
+                      persona: "{{ persona }}"
+                      local_corpus: []
+                    save_as: turn
+
+                  - set:
+                      "last_text_by_avatar.{{ avatar_key }}": "{{ turn.text }}"
+                      audio_segments: "{{ audio_segments + [ turn.audio_path ] }}"
+
+                  - call: append_transcript
+                    with:
+                      avatar_key: "{{ avatar_key }}"
+                      phase_name: "{{ phase_name }}"
+                      text: "{{ turn.text }}"
+                      citations: "{{ turn.citations }}"
+                      audio_path: "{{ turn.audio_path }}"
+
+                  - call: summarizer
+                    with:
+                      prev_summary: "{{ dialog_summary }}"
+                      new_turn_text: "{{ turn.text }}"
+                    save_as: s
+                  - set: { dialog_summary: "{{ s.summary }}" }
+
+      - call: mixer
+        with:
+          episode_id: "{{ episode_id }}"
+          audio_segments: "{{ audio_segments }}"
+        save_as: mix
+
+      - call: notes
+        with:
+          topic: "{{ topic }}"
+          episode_id: "{{ episode_id }}"
+
+      - output:
+          audio_url: "data/audio/{{ episode_id }}.mp3"
+          transcript_path: "data/transcripts/{{ episode_id }}.json"
+          notes_path: "data/notes/{{ episode_id }}.md"
