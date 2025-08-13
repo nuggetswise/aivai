@@ -1,0 +1,181 @@
+Here’s a revised, logically ordered checklist that leads directly into file scaffolding. This version ensures you first set up the environment, then scaffold the structure, and finally implement features in a sequence that matches the project’s data flow and dependencies.
+
+---
+
+## **MVP Implementation Checklist (with Scaffolding First)**
+
+### **1. Environment & Setup**
+- [ ] Set up Python 3.10+ environment (preferably with GPU support)
+- [ ] Install Poetry, ffmpeg, NVIDIA drivers, CUDA
+- [ ] Clone repo and run `poetry install`
+- [ ] Copy `.env.example` to `.env` and add all required API keys
+
+---
+
+### **2. File & Folder Scaffolding**
+- [ ] Scaffold the following folder structure and empty files (no stubs or to-dos):
+
+```
+ai-vs-ai-podcast/
+├─ .env.example
+├─ Makefile
+├─ README.md
+├─ pyproject.toml
+├─ docker-compose.yml
+├─ whitelist.yaml
+├─ app/
+│  ├─ main.py
+│  ├─ config.py
+│  ├─ models.py
+│  ├─ deps.py
+│  ├─ orchestrator/
+│  │   ├─ episode_runner.py
+│  │   ├─ rundown.py
+│  │   ├─ guards.py
+│  │   └─ similarity.py
+│  ├─ agents/
+│  │   ├─ researcher.py
+│  │   ├─ commentator.py
+│  │   ├─ verifier.py
+│  │   └─ style.py
+│  ├─ retrieval/
+│  │   ├─ indexer.py
+│  │   ├─ store.py
+│  │   └─ rank.py
+│  ├─ tts/
+│  │   ├─ dia_synth.py
+│  │   └─ adapter.py
+│  ├─ io/
+│  │   ├─ scraper.py
+│  │   ├─ cleaner.py
+│  │   ├─ files.py
+│  │   └─ audio.py
+│  ├─ prompts/
+│  │   ├─ persona_template.yaml
+│  │   ├─ researcher.txt
+│  │   ├─ commentator.txt
+│  │   └─ verifier.txt
+│  └─ ui/
+│      └─ producer_stub.md
+├─ scripts/
+│  ├─ seed_index.py
+│  └─ run_episode.py
+├─ corpus/
+│  ├─ <avatar1>/
+│  │   ├─ manifest.yaml
+│  │   └─ links.csv
+│  └─ <avatar2>/
+│      ├─ manifest.yaml
+│      └─ links.csv
+└─ data/
+   ├─ indices/
+   ├─ sources/
+   ├─ bundles/
+   ├─ turns/
+   ├─ audio/
+   ├─ transcripts/
+   └─ voices/
+```
+
+---
+
+### **3. Configuration & Policies**
+- [ ] Set up `app/config.py` and `app/deps.py` for configuration and dependency injection
+- [ ] Add `whitelist.yaml` for source policies
+
+---
+
+### **4. Persona & Corpus**
+- [ ] Create persona YAML templates in `app/prompts/persona_template.yaml`
+- [ ] Prepare at least two avatars (YAMLs in `corpus/`)
+- [ ] Prepare `links.csv` and `manifest.yaml` for each avatar’s seed corpus
+- [ ] Place reference audio files for each avatar in `data/voices/`
+
+---
+
+### **5. Retrieval & Indexing**
+- [ ] Implement `app/retrieval/indexer.py` for fetching, cleaning, chunking, embedding, and indexing sources
+- [ ] Implement `app/retrieval/store.py` for FAISS + metadata
+- [ ] Implement `app/retrieval/rank.py` for BM25 + dense + trust + recency ranking
+
+---
+
+### **6. Agents**
+- [ ] Implement `app/agents/researcher.py` for evidence bundle creation
+- [ ] Implement `app/agents/commentator.py` for persona-locked speech generation
+- [ ] Implement `app/agents/verifier.py` for citation and support checking
+- [ ] Implement `app/agents/style.py` for tone/quirks pass
+
+---
+
+### **7. Prompts**
+- [ ] Write prompt templates: `researcher.txt`, `commentator.txt`, `verifier.txt` in `app/prompts/`
+
+---
+
+### **8. Orchestration**
+- [ ] Implement `app/orchestrator/episode_runner.py` for the main debate workflow
+- [ ] Implement `app/orchestrator/rundown.py` for debate sequence
+- [ ] Implement `app/orchestrator/guards.py` for anti-repetition and persona reminder logic
+- [ ] Implement `app/orchestrator/similarity.py` for cosine similarity checks
+- [ ] Add summarization logic (e.g., `summarize_dialogue`) to the orchestrator
+- [ ] Ensure transcript generation and storage in `data/transcripts/`
+
+---
+
+### **9. TTS Integration**
+- [ ] Implement `app/tts/dia_synth.py` for Dia TTS synthesis (using HuggingFace Transformers)
+- [ ] Implement `app/tts/adapter.py` for vendor switching
+
+---
+
+### **10. IO Utilities**
+- [ ] Implement `app/io/scraper.py` for web fetching
+- [ ] Implement `app/io/cleaner.py` for text cleaning
+- [ ] Implement `app/io/files.py` for file operations
+- [ ] Implement `app/io/audio.py` for audio mixing (mixdown) and loudness normalization
+
+---
+
+### **11. API & UI**
+- [ ] Implement FastAPI routes in `app/main.py` for avatar creation, research, and episode running
+- [ ] Add a stub UI spec in `app/ui/producer_stub.md`
+- [ ] Implement Pydantic schemas in `app/models.py`
+
+---
+
+### **12. Scripts & Makefile**
+- [ ] Implement `scripts/seed_index.py` and `scripts/run_episode.py` for Makefile integration
+- [ ] Add Makefile targets for install, run, seed, and episode
+
+---
+
+### **13. Guardrails & Policies**
+- [ ] Implement citation enforcement in verifier
+- [ ] Enforce default_unknown fallback
+- [ ] Enforce whitelist/greylist/blacklist policy from `whitelist.yaml`
+- [ ] Enforce freshness via `FRESHNESS_DAYS`
+
+---
+
+### **14. Testing & Validation**
+- [ ] Write unit tests for core modules (retrieval, agents, orchestrator)
+- [ ] Test end-to-end flow: avatar creation → research → debate → TTS → audio mixdown
+- [ ] Validate citation enforcement, anti-repetition, and persona reminder logic
+
+---
+
+### **15. Documentation**
+- [ ] Document setup and usage in `README.md`
+- [ ] Add example persona YAMLs and sample episode topic
+- [ ] Provide ready-to-run `links.csv` for avatars
+
+---
+
+### **16. (Optional) Video Pipeline**
+- [ ] Integrate SadTalker/Wav2Lip for avatar animation (optional)
+- [ ] Script to stitch audio and video into MP4
+
+---
+
+Let me know if you want to proceed with the file scaffolding now!

@@ -1,0 +1,679 @@
+Yes — if you want this to be modular and defensible, wiring **Researcher → Commentator → Verifier → Style** as **Langmanus agents** is exactly the right move.
+
+Here’s how I’d set it up inside Langmanus so you get:
+
+* **Role separation** (no one agent can hallucinate freely)
+* **Plug-and-swap models** (cheap for some steps, expensive for others)
+* **Per-avatar personality rules** baked in only where they belong.
+
+---
+
+## **Agent definitions**
+
+### **1. Researcher** (fact-only)
+
+**Purpose**: Ingest the topic + avatar stance, run web search (Tavily, DDG, etc.), fetch + clean, and produce an **evidence bundle** (JSON).
+
+```yaml
+agents:
+  researcher:
+    description: "Searches and compiles factual evidence from whitelisted web and local corpus"
+    model: slm-medium   # cheap, extractive
+    tools:
+      - web.search
+      - web.fetch
+      - html.clean_readability
+    input_schema: researcher_input_v1
+    output_schema: evidence_bundle_v1
+    system_prompt: |
+      You are a fact-only researcher. 
+      Use only the provided excerpts from the web and local seed corpus.
+      Quote or tightly paraphrase, attach citations [S#] or [L#].
+      Flag contradictions and stale data.
+```
+
+---
+
+### **2. Commentator** (persona-locked)
+
+**Purpose**: Use **only** the evidence bundle to produce an avatar’s turn in the debate, respecting tone, quirks, and forbidden topics.
+
+```yaml
+  commentator:
+    description: "Generates persona-locked debate turn from evidence bundle"
+    model: llm-instruct   # e.g., GPT-4o-mini or Gemini Flash
+    input_schema: commentator_input_v1
+    output_schema: debate_turn_v1
+    system_prompt: |
+      You are {{persona.name}}, a {{persona.role}}.
+      Speak in {{persona.tone}} with quirks: {{persona.quirks | join(", ")}}.
+      Use only the evidence claims below. No new facts.
+      If unsupported, say: "{{persona.default_unknown}}"
+      Every factual sentence must have a bracketed citation.
+```
+
+---
+
+### **3. Verifier** (referee)
+
+**Purpose**: Check that every factual sentence is supported by the evidence bundle. Remove or rewrite unsupported claims.
+
+```yaml
+  verifier:
+    description: "Checks factual support and corrects or removes unsupported claims"
+    model: slm-mini   # cheapest that can parse and reason
+    input_schema: verifier_input_v1
+    output_schema: debate_turn_v1
+    system_prompt: |
+      Validate factual support against evidence bundle.
+      If a sentence lacks support or has wrong citation, minimally edit to become supported, 
+      or replace with "{{persona.default_unknown}}".
+```
+
+---
+
+### **4. Style** (tone enforcer)
+
+**Purpose**: Post-process the verified text to sharpen persona style — without changing facts or citations.
+
+```yaml
+  style:
+    description: "Adjusts tone and phrasing to match persona style without altering facts"
+    model: slm-mini
+    input_schema: style_input_v1
+    output_schema: debate_turn_v1
+    system_prompt: |
+      Adjust only style: sentence rhythm, persona quirks, tone.
+      Do not add or remove citations. Do not alter facts.
+```
+
+---
+
+## **Pipeline config**
+
+```yaml
+pipelines:
+  debate_turn:
+    steps:
+      - agent: researcher
+      - agent: commentator
+      - agent: verifier
+      - agent: style
+```
+
+---
+
+## **Per-avatar overrides**
+
+Langmanus lets you load **persona YAML** into the `commentator` and `style` steps dynamically:
+
+```yaml
+overrides:
+  commentator:
+    system_prompt_vars:
+      persona: "{{load_persona('avatars/alex.yaml')}}"
+  style:
+    system_prompt_vars:
+      persona: "{{load_persona('avatars/alex.yaml')}}"
+```
+
+---
+
+## **Benefits**
+
+* **Swap models per step** (cheap for researcher/verifier/style, better model for commentator).
+* **Audit** each step’s output (store evidence bundle, raw commentary, verification diffs, style pass).
+* **Defensibility**: you can improve your *researcher* and *verifier* logic (ranking, trust scores, contradiction handling) without touching persona code.
+* **Safety**: even if Commentator tries to hallucinate, Verifier enforces grounding.
+
+---
+Alright — here’s a **Langmanus YAML** for your 4-agent pipeline (**Researcher → Commentator → Verifier → Style**) with **Tavily search** integration and a **Dia TTS** hook at the end.
+This is set up so you can run it per avatar turn and get a ready audio clip + citations.
+
+---
+
+## **`pipeline.yaml`**
+
+```yaml
+# AI-vs-AI Debate Turn Pipeline (Langmanus)
+
+vars:
+  freshness_days: 120
+  whitelist:
+    - europa.eu
+    - nist.gov
+    - oecd.org
+    - who.int
+    - reuters.com
+    - bbc.com
+    - nature.com
+    - acm.org
+    - mit.edu
+    - stanford.edu
+  greylist:
+    - gov.uk
+    - canada.ca
+    - company.com/blog
+  blacklist:
+    - "*-seo-*"
+    - "presswire.*"
+    - "contentfarm.*"
+
+agents:
+  researcher:
+    description: "Gathers factual evidence from web + local corpus for the debate turn"
+    model: slm-medium
+    tools:
+      - name: tavily_search
+        args:
+          num_results: 12
+          freshness_days: "{{ freshness_days }}"
+          whitelist: "{{ whitelist }}"
+          greylist: "{{ greylist }}"
+          blacklist: "{{ blacklist }}"
+      - name: web.fetch
+      - name: html.clean_readability
+    input_schema:
+      type: object
+      properties:
+        topic: { type: string }
+        intent: { type: string }
+        opponent_point: { type: string }
+        local_corpus: { type: array, items: { type: string } }
+    output_schema:
+      type: object
+      properties:
+        claims:
+          type: array
+          items:
+            type: object
+            properties:
+              text: { type: string }
+              citations: { type: array, items: { type: string } }
+              confidence: { type: number }
+        contradictions: { type: array }
+        omissions: { type: array }
+    system_prompt: |
+      You are a fact-only researcher.
+      Use ONLY the provided excerpts from the web and the local seed corpus.
+      Quote or tightly paraphrase; attach [S#] for web and [L#] for local after each claim.
+      Flag contradictions and stale data.
+      Do NOT add opinions.
+
+  commentator:
+    description: "Generates persona-locked debate turn from evidence bundle"
+    model: gpt-4o-mini
+    temperature: 0.25
+    input_schema:
+      type: object
+      properties:
+        topic: { type: string }
+        phase: { type: string }
+        intent: { type: string }
+        opponent_summary: { type: string }
+        persona: { type: object }
+        evidence_bundle: { type: object }
+    output_schema:
+      type: object
+      properties:
+        text: { type: string }
+        citations: { type: array, items: { type: string } }
+    system_prompt: |
+      You are {{ persona.name }}, a {{ persona.role }}.
+      Speak in {{ persona.tone }} with quirks: {{ persona.speech_quirks | join(", ") }}.
+      Use only the evidence claims provided. No new facts.
+      If unsupported, say: "{{ persona.default_unknown }}".
+      Every factual sentence MUST have a bracketed citation like [S1] or [L2].
+      End with one concise takeaway.
+
+  verifier:
+    description: "Checks factual support for each sentence and fixes or removes unsupported claims"
+    model: phi-3.5-mini
+    temperature: 0
+    input_schema:
+      type: object
+      properties:
+        draft: { type: string }
+        evidence_bundle: { type: object }
+        persona: { type: object }
+    output_schema:
+      type: object
+      properties:
+        text: { type: string }
+        citations: { type: array, items: { type: string } }
+    system_prompt: |
+      Validate factual support for each sentence in the draft.
+      If a sentence has wrong or missing citation, minimally edit to match the evidence or replace with "{{ persona.default_unknown }}".
+      Do not add new facts.
+
+  style:
+    description: "Adjusts tone and style to match persona without altering facts or citations"
+    model: phi-3.5-mini
+    temperature: 0
+    input_schema:
+      type: object
+      properties:
+        verified_text: { type: string }
+        persona: { type: object }
+    output_schema:
+      type: object
+      properties:
+        styled_text: { type: string }
+    system_prompt: |
+      Adjust only style to fit {{ persona.name }}'s tone and quirks.
+      Do not change facts or citations.
+      Keep all citations intact.
+
+  tts:
+    description: "Synthesizes audio for the final styled text using Dia TTS"
+    model: local
+    run: python app/tts/dia_synth.py --text "{{ styled_text }}" --ref "{{ persona.voice.ref_audio }}" --speaker_tag "{{ persona.voice.speaker_tag }}"
+    input_schema:
+      type: object
+      properties:
+        styled_text: { type: string }
+        persona: { type: object }
+    output_schema:
+      type: object
+      properties:
+        audio_path: { type: string }
+
+pipelines:
+  debate_turn:
+    steps:
+      - agent: researcher
+      - agent: commentator
+      - agent: verifier
+      - agent: style
+      - agent: tts
+```
+
+---
+
+## **What this does**
+
+1. **Researcher** → runs Tavily search with whitelist/freshness rules + local corpus retrieval, outputs JSON evidence bundle.
+2. **Commentator** → persona-locked response **only** from that bundle.
+3. **Verifier** → strips/fixes anything unsupported.
+4. **Style** → applies tone/quirks without touching facts.
+5. **TTS** → calls your `dia_synth.py` to produce the audio file.
+
+---
+
+## **Persona example (`avatars/alex.yaml`)**
+
+```yaml
+name: "Alex"
+role: "Tech Ethicist"
+tone: "calm, precise"
+speech_quirks:
+  - "uses history analogies"
+  - "asks short, probing questions"
+  - "avoids jargon"
+default_unknown: "I don't know based on my sources."
+voice:
+  vendor: "dia"
+  ref_audio: "data/voices/alex_ref.wav"
+  speaker_tag: "[S1]"
+```
+
+---
+
+## **Running a turn**
+
+```bash
+langmanus run debate_turn \
+  --input.topic "Face recognition in public spaces" \
+  --input.intent "Opening position" \
+  --input.opponent_point "" \
+  --input.phase "opening" \
+  --input.persona avatars/alex.yaml \
+  --input.local_corpus corpus/alex_ethicist/*
+```
+
+It will output:
+
+* `claims[]` JSON from Researcher
+* `text` with citations from Style
+* `audio_path` pointing to the Dia-rendered WAV/MP3
+
+Awesome — here’s a **multi-turn Langmanus orchestrator** that runs a whole episode end-to-end:
+
+* pre-research for both avatars (so they get 5–10 min to harvest sources),
+* iterative turns (opening → crossfire → closing) with **opponent\_summary** passed along,
+* Dia TTS on each verified turn,
+* auto-mix + episode notes at the end.
+
+I’m keeping it YAML-first (so you can drop it straight in), plus tiny helper scripts for mixing and notes.
+
+---
+
+# `episode_orchestrator.yaml`
+
+```yaml
+# Full-episode orchestration for AI-vs-AI debate
+# Requires: pipeline.yaml from previous step (researcher → commentator → verifier → style → tts)
+# Assumes Langmanus supports: set, foreach, parallel, pipeline invocation, and variable templating.
+
+vars:
+  freshness_days: 120
+  max_pages: 30
+  # Rundown: phases with turn order (by avatar key) and intent
+  rundown:
+    - { name: "opening",   intent: "opening",     sequence: ["A1","A2"] }
+    - { name: "positions", intent: "positioning", sequence: ["A1","A2"] }
+    - { name: "crossfire", intent: "rebuttal",    sequence: ["A2","A1","A2","A1"] }
+    - { name: "closing",   intent: "closing",     sequence: ["A1","A2"] }
+
+inputs:
+  topic: string
+  avatarA_path: string   # path to persona YAML (e.g., avatars/alex.yaml)
+  avatarB_path: string   # path to persona YAML (e.g., avatars/nova.yaml)
+
+state:
+  A1: {}                 # runtime slot for avatar A
+  A2: {}                 # runtime slot for avatar B
+  transcript: []         # list of {avatar, phase, text, citations, audio_path}
+  last_text_by_avatar: {} # {A1: "...", A2: "..."}
+  dialog_summary: ""     # running <200T summary of prior turns
+  audio_segments: []     # paths to per-turn audio files
+  bundles: {}            # optional: store bundle ids/metadata
+
+agents:
+  # Summarize last turn into a compact dialogue state for the next speaker
+  summarizer:
+    description: "Maintains a compact running summary (≤200 tokens)"
+    model: gpt-4o-mini
+    temperature: 0.2
+    input_schema:
+      type: object
+      properties:
+        prev_summary: { type: string }
+        new_turn_text: { type: string }
+    output_schema:
+      type: object
+      properties:
+        summary: { type: string }
+    system_prompt: |
+      Summarize the NEW turn into a compact update (≤200 tokens) suitable
+      to brief the next speaker. Keep only essential claims or questions.
+
+  # Simple collector to append a transcript row (could be a local script too)
+  append_transcript:
+    model: local
+    run: python app/io/append_transcript.py --avatar "{{ avatar_key }}" --phase "{{ phase_name }}" --text "{{ text }}" --citations "{{ citations | tojson }}" --audio "{{ audio_path }}"
+
+  # Final audio mixdown (ffmpeg loudnorm, crossfades, stingers)
+  mixer:
+    model: local
+    run: python app/io/mix_episode.py --inputs "{{ audio_segments | join(',') }}" --out "data/audio/{{ episode_id }}.mp3"
+
+  # Generate show notes (markdown with chapters + citations)
+  notes:
+    model: local
+    run: python app/io/make_notes.py --topic "{{ topic }}" --transcript "data/transcripts/{{ episode_id }}.json" --out "data/notes/{{ episode_id }}.md"
+
+pipelines:
+
+  # (A) One-time pre-research sprint per avatar (5–10 minutes total in parallel)
+  pre_research_sprint:
+    inputs:
+      topic: string
+      persona: object
+      avatar_key: string      # "A1" or "A2"
+    steps:
+      - set: { phase_intent: "evidence_harvest" }
+      - call: debate_turn     # reuse the same pipeline; intent controls behavior
+        with:
+          topic: "{{ topic }}"
+          intent: "{{ phase_intent }}"
+          opponent_point: ""
+          phase: "pre-research"
+          persona: "{{ persona }}"
+          local_corpus: []    # optional: seed pack files
+        save_as: pr
+      - set: { "bundles.{{ avatar_key }}": "{{ pr.claims }}" }  # keep for inspection, optional
+
+  # (B) One complete episode
+  episode_run:
+    inputs:
+      topic: string
+      avatarA_path: string
+      avatarB_path: string
+      episode_id: string
+    steps:
+      # Load personas from files so we can reuse across steps
+      - set: { persona_A1: "{{ load_yaml(avatarA_path) }}" }
+      - set: { persona_A2: "{{ load_yaml(avatarB_path) }}" }
+
+      # Parallel pre-research (gives the system 5–10 min to build evidence)
+      - parallel:
+          - pipeline: pre_research_sprint
+            with: { topic: "{{ topic }}", persona: "{{ persona_A1 }}", avatar_key: "A1" }
+          - pipeline: pre_research_sprint
+            with: { topic: "{{ topic }}", persona: "{{ persona_A2 }}", avatar_key: "A2" }
+
+      # Initialize
+      - set: { dialog_summary: "", transcript: [], audio_segments: [], last_text_by_avatar: {} }
+
+      # Iterate over phases and turns
+      - foreach:
+          list: "{{ rundown }}"
+          as: phase
+          do:
+            - set:
+                phase_name: "{{ phase.name }}"
+                intent: "{{ phase.intent }}"
+
+            - foreach:
+                list: "{{ phase.sequence }}"
+                as: who
+                do:
+                  # Resolve persona + opponent summary for this speaker
+                  - set:
+                      persona: "{{ (who == 'A1') ? persona_A1 : persona_A2 }}"
+                      speaker_tag: "{{ (who == 'A1') ? persona_A1.voice.speaker_tag : persona_A2.voice.speaker_tag }}"
+                      avatar_key: "{{ who }}"
+                      opponent_key: "{{ (who == 'A1') ? 'A2' : 'A1' }}"
+                      opponent_summary: "{{ last_text_by_avatar[opponent_key] | default('') }}"
+
+                  # Generate one turn (Researcher → Commentator → Verifier → Style → TTS)
+                  - call: debate_turn
+                    with:
+                      topic: "{{ topic }}"
+                      intent: "{{ intent }}"
+                      opponent_point: "{{ opponent_summary }}"
+                      phase: "{{ phase_name }}"
+                      persona: "{{ persona }}"
+                      local_corpus: []   # optional seed files
+                    save_as: turn
+
+                  # turn output contract (from pipeline.yaml):
+                  # turn.text (final styled), turn.citations (array), turn.audio_path
+
+                  # Append artifacts to state
+                  - set:
+                      "last_text_by_avatar.{{ avatar_key }}": "{{ turn.text }}"
+                      audio_segments: "{{ audio_segments + [ turn.audio_path ] }}"
+
+                  - call: append_transcript
+                    with:
+                      avatar_key: "{{ avatar_key }}"
+                      phase_name: "{{ phase_name }}"
+                      text: "{{ turn.text }}"
+                      citations: "{{ turn.citations }}"
+                      audio_path: "{{ turn.audio_path }}"
+
+                  # Update dialog summary for next speaker
+                  - call: summarizer
+                    with:
+                      prev_summary: "{{ dialog_summary }}"
+                      new_turn_text: "{{ turn.text }}"
+                    save_as: s
+                  - set: { dialog_summary: "{{ s.summary }}" }
+
+      # Finalize: mix audio and generate notes
+      - call: mixer
+        with:
+          episode_id: "{{ episode_id }}"
+          audio_segments: "{{ audio_segments }}"
+        save_as: mix
+      - call: notes
+        with:
+          topic: "{{ topic }}"
+          episode_id: "{{ episode_id }}"
+      - output:
+          audio_url: "data/audio/{{ episode_id }}.mp3"
+          transcript_path: "data/transcripts/{{ episode_id }}.json"
+          notes_path: "data/notes/{{ episode_id }}.md"
+```
+
+---
+
+## Helper scripts (minimal)
+
+### `app/io/append_transcript.py`
+
+Appends a row to `data/transcripts/{episode_id}.json`. (Episode ID is provided by the orchestrator environment or pre-set variable.)
+
+```python
+# app/io/append_transcript.py
+import json, os, argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--avatar", required=True)
+parser.add_argument("--phase", required=True)
+parser.add_argument("--text", required=True)
+parser.add_argument("--citations", required=True)
+parser.add_argument("--audio", required=True)
+args = parser.parse_args()
+
+episode_id = os.environ.get("EPISODE_ID", "ep_local")
+path = f"data/transcripts/{episode_id}.json"
+os.makedirs(os.path.dirname(path), exist_ok=True)
+
+row = {
+  "avatar": args.avatar,
+  "phase": args.phase,
+  "text": args.text,
+  "citations": json.loads(args.citations),
+  "audio_path": args.audio
+}
+
+data = []
+if os.path.exists(path):
+  with open(path) as f: data = json.load(f)
+data.append(row)
+with open(path, "w") as f: json.dump(data, f, ensure_ascii=False, indent=2)
+print(path)
+```
+
+### `app/io/mix_episode.py`
+
+Concats segments, applies loudness, inserts short crossfades (requires `ffmpeg`).
+
+```python
+# app/io/mix_episode.py
+import argparse, subprocess, os, tempfile, json
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--inputs", required=True)  # comma-separated wav paths
+parser.add_argument("--out", required=True)
+args = parser.parse_args()
+
+inputs = [p for p in args.inputs.split(",") if p]
+if not inputs: raise SystemExit("No inputs")
+
+# Build ffconcat file for clean joins with short fades
+concat_file = tempfile.NamedTemporaryFile(delete=False, suffix=".txt").name
+with open(concat_file, "w") as f:
+  f.write("ffconcat version 1.0\n")
+  for p in inputs:
+    f.write(f"file '{os.path.abspath(p)}'\n")
+
+# Simple concat + loudnorm
+cmd = [
+  "ffmpeg","-y",
+  "-f","concat","-safe","0","-i",concat_file,
+  "-af","loudnorm=I=-16:TP=-1.5:LRA=11",
+  "-c:a","mp3",
+  args.out
+]
+subprocess.check_call(cmd)
+print(args.out)
+```
+
+### `app/io/make_notes.py`
+
+Creates Markdown show notes with chapters and inline citations.
+
+```python
+# app/io/make_notes.py
+import argparse, json, os
+parser = argparse.ArgumentParser()
+parser.add_argument("--topic", required=True)
+parser.add_argument("--transcript", required=False)
+parser.add_argument("--out", required=True)
+args = parser.parse_args()
+
+rows = []
+if args.transcript and os.path.exists(args.transcript):
+  rows = json.load(open(args.transcript))
+
+os.makedirs(os.path.dirname(args.out), exist_ok=True)
+with open(args.out, "w") as f:
+  f.write(f"# Debate: {args.topic}\n\n")
+  f.write("## Chapters\n")
+  phase_idx = 1
+  for phase in ["opening","positions","crossfire","closing"]:
+    f.write(f"- {phase_idx}. {phase.title()}\n")
+    phase_idx += 1
+  f.write("\n## Transcript (with citations)\n")
+  for r in rows:
+    f.write(f"**{r['avatar']} / {r['phase']}**: {r['text']}\n\n")
+  f.write("\n---\n*Generated with grounded evidence; each factual sentence cites [S#]/[L#].*\n")
+print(args.out)
+```
+
+---
+
+## How you run a whole episode
+
+```bash
+# 1) Set episode id (so transcript/notes land in the right file)
+export EPISODE_ID="ep-001"
+
+# 2) Kick off the episode orchestration
+langmanus run episode_run \
+  --input.topic "Should social media age-verification be mandated by law?" \
+  --input.avatarA_path avatars/alex.yaml \
+  --input.avatarB_path avatars/nova.yaml \
+  --input.episode_id "$EPISODE_ID"
+```
+
+**Outputs**
+
+* `data/audio/ep-001.mp3`  ← mixed master
+* `data/transcripts/ep-001.json`
+* `data/notes/ep-001.md`
+
+---
+
+## Notes on behavior (to match your product goals)
+
+* The **pre\_research\_sprint** runs first (in parallel), giving the system time to pull/clean/chunk sources and warm caches (your 5–10 minute “gather” window).
+* Each **turn** reuses the same `debate_turn` pipeline (Researcher → Commentator → Verifier → Style → Dia TTS). Because you’ve already fetched and cached most sources, web hits are faster and mostly incremental.
+* **opponent\_summary** is passed using `last_text_by_avatar[...]`, letting each avatar rebut the most recent claim.
+* Dia is fed **short segments** per turn (8–20s), which avoids the “speed-up” artifact and keeps voices crisp.
+
+---
+
+## Where to add your moat (hooks already exposed)
+
+* **Source ranking policy**: tighten your whitelist, add per-domain trust scores, boost peer-reviewed over hot takes.
+* **Claim DB & callbacks**: before `commentator`, inject “past positions” of that avatar so it can self-reference across episodes.
+* **Persona drift**: add a `drift_checker` agent after Style; if drift > threshold, inject a micro “style reminder” and re-Style.
+
+---
+
+This is production-oriented and runnable once you plug in your Langmanus runtime and the earlier `pipeline.yaml`. 

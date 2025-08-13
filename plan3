@@ -1,0 +1,72 @@
+Now that all files are placeholders, the next step is to start implementing the core functionality, following the logical flow of your plan. Here’s a recommended approach to proceed:
+
+---
+
+### 1. **Configuration & Environment**
+- Implement config.py to load settings from environment variables (API keys, paths, etc.).
+- Set up deps.py for dependency injection (e.g., LLM clients, search clients, vector stores).
+
+---
+
+### 2. **Data Models & Schemas**
+- Define Pydantic models in models.py for Avatars, Episodes, Bundles, Turns, etc.
+
+---
+
+### 3. **Retrieval Pipeline**
+- Implement indexer.py to fetch, clean, chunk, embed, and index documents.
+- Implement store.py for FAISS and metadata storage.
+- Implement rank.py for ranking (BM25, dense, trust, recency).
+
+---
+
+### 4. **Agents**
+- Implement the core logic for:
+  - researcher.py (web search, scrape, bundle evidence)
+  - commentator.py (generate debate turns)
+  - verifier.py (citation/support check)
+  - style.py (apply persona quirks/tone)
+
+---
+
+### 5. **Orchestration**
+- Implement episode_runner.py to coordinate the debate workflow.
+- Implement rundown.py for debate sequencing.
+- Implement guards.py for anti-repetition, persona reminders, and fallback logic.
+- Implement similarity.py for similarity checks.
+
+---
+
+### 6. **TTS Integration**
+- Implement dia_synth.py for Dia TTS synthesis.
+- Implement adapter.py for switching TTS vendors.
+
+---
+
+### 7. **IO Utilities**
+- Implement scraper.py, cleaner.py, files.py, and audio.py for all file, web, and audio operations.
+
+---
+
+### 8. **Prompt Templates**
+- Fill in the prompt templates in prompts for each agent role.
+
+---
+
+### 9. **API**
+- Implement FastAPI routes in main.py for avatar creation, research, and episode orchestration.
+
+---
+
+### 10. **Testing & Validation**
+- Add unit tests and integration tests for each module as you build.
+
+---
+
+### 11. **Documentation**
+- Update README.md and add usage examples as features are completed.
+
+---
+
+**Recommended next step:**  
+Start with configuration, models, and retrieval/indexing, as these are foundational for the rest of the pipeline. Would you like to begin with the configuration and models, or focus on a different part of the system first? Let me know your preference!

@@ -1,0 +1,54 @@
+ai-vs-ai-podcast/
+├─ .env.example
+├─ Makefile
+├─ README.md
+├─ pyproject.toml
+├─ docker-compose.yml            # optional, for GPU host
+├─ app/
+│  ├─ main.py                    # FastAPI app, routes
+│  ├─ config.py                  # settings from env
+│  ├─ models.py                  # pydantic schemas
+│  ├─ deps.py                    # DI for clients (LLM, search, stores)
+│  ├─ orchestrator/
+│  │   ├─ episode_runner.py
+│  │   ├─ rundown.py
+│  │   ├─ guards.py
+│  │   └─ similarity.py
+│  ├─ agents/
+│  │   ├─ researcher.py          # web search, scrape, bundle
+│  │   ├─ commentator.py         # persona-locked gen from bundle
+│  │   ├─ verifier.py            # support check + minimal edits
+│  │   └─ style.py               # tone/quirks pass (no new facts)
+│  ├─ retrieval/
+│  │   ├─ indexer.py             # fetch→clean→chunk→embed→faiss
+│  │   ├─ store.py               # FAISS + metadata
+│  │   └─ rank.py                # BM25 + dense + trust + recency
+│  ├─ tts/
+│  │   ├─ dia_synth.py           # Transformers integration
+│  │   └─ adapter.py             # vendor switch (dia|azure|eleven)
+│  ├─ io/
+│  │   ├─ scraper.py
+│  │   ├─ cleaner.py
+│  │   ├─ files.py
+│  │   └─ audio.py               # ffmpeg mix, loudness
+│  ├─ prompts/
+│  │   ├─ persona_template.yaml
+│  │   ├─ researcher.txt
+│  │   ├─ commentator.txt
+│  │   └─ verifier.txt
+│  └─ ui/
+│      └─ producer_stub.md       # endpoints & sequence for later Next.js
+├─ corpus/                       # seed article packs (optional)
+│  ├─ alex_ethicist/
+│  │   ├─ manifest.yaml
+│  │   └─ links.csv
+│  └─ nova_builder/
+│      ├─ manifest.yaml
+│      └─ links.csv
+└─ data/                         # runtime artifacts
+   ├─ indices/{avatar}.faiss
+   ├─ sources/{avatar}/*.json
+   ├─ bundles/{episode}/{avatar}/*.json
+   ├─ turns/{episode}/*.json
+   ├─ audio/{episode}/*.wav|.mp3
+   └─ transcripts/{episode}/*.json|.vtt

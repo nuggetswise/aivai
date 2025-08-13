@@ -1,0 +1,234 @@
+Love this. Here’s a tight, end‑to‑end plan for your “spin‑up two smart avatars → let them research 5–10 min → record a 2–3 min debate → (optionally) render a simple video/caricature.”
+
+# Product flow (what the user experiences)
+
+1. **Pick a topic** (or “surprise me”).
+2. **Generate two avatars** (distinct personas) → you can edit tone/stance.
+3. **Research sprint (5–10 min)** → both avatars auto‑gather sources from the web, build their own corpora, chunk & embed.
+4. **Preview**: see their stance cards + top sources + sample opening lines.
+5. **Record debate (2–3 min)** → orchestrator runs the turns; you can pause/skip/regenerate a turn.
+6. **Outputs**: mixed audio + transcript with citations + share page.
+   Optional: **video** (simple talking heads or caricature).
+
+---
+
+# System architecture (minimal, reliable)
+
+## Services
+
+* **API/Orchestrator** (Node or Python): routes steps, manages turns, retries.
+* **Researcher** (agent): web search + scraping + extractive notes (no opinions).
+* **Indexer**: normalize → chunk → embed → per‑avatar vector store.
+* **Commentator** (agent): persona‑locked speech from evidence bundle only.
+* **Verifier**: checks every factual sentence has a valid citation.
+* **TTS**: Dia (nari‑labs) as default; adapter lets you swap with Coqui/Azure/Eleven later.
+* **Mixer**: assembles audio with stingers, loudness, exports.
+* **(Optional) Video Renderer**: talking head / caricature.
+
+## Storage
+
+* **Postgres**: avatars, episodes, turns, source manifests.
+* **Object store (S3/B2/GCS)**: raw pages, audio clips, transcripts, final MP3/MP4.
+* **Vector store**: FAISS for MVP (file‑backed); upgrade to Weaviate/Pinecone later.
+
+---
+
+# Pipeline by phase
+
+## A) Topic → Avatar creation (30–60s)
+
+* **Inputs**: topic, “tone sliders” (optimist vs. skeptic, formal vs. witty, etc.).
+* **Persona spec (YAML)** auto‑generated (editable):
+
+  * `name, role, stance, tone, speech_quirks[3], forbidden_topics[], default_unknown`.
+* **Seed sources** (optional): you paste URLs if you want to anchor them.
+
+> Tip: you can also source the persona + initial URLs via Perplexity with the prompt we drafted earlier.
+
+## B) Research sprint (5–10 min, parallel per avatar)
+
+* **Search**: Tavily API (structured results, freshness filter) or DuckDuckGo via SerpAPI.
+  Policy: whitelist.gov/.edu/.org + top media; configurable greylists/blacklists.
+* **Scrape & clean**: Readability + trafilatura; dedupe by URL hash; capture publish/updated date.
+* **Chunking**: 400–800 tokens; keep headings + paragraph indices.
+* **Embeddings**: small, fast model (e5‑small/bge‑small) → FAISS index per avatar.
+* **Evidence ranking**: BM25 + dense sim + domain trust + recency boost.
+* **Bundle**: select top snippets (1.2–1.8k tokens) + local seed docs → **evidence bundle** JSON.
+
+## C) Debate generation (2–3 min total)
+
+* **Rundown** (editable template):
+
+  * Opening (20–30s) → positions (40–60s) → crossfire (60–75s) → closing (20–30s).
+
+* **Turn loop (per avatar)**:
+
+  1. Build queries from last turn → **retrieve** top‑k snippets from avatar’s own index (+ neutral moderator index if used).
+  2. **Commentator** writes 8–15s of talk (max \~260 tokens), **must cite** \[#1] style.
+  3. **Verifier** fixes/strips unsupported claims (if none, says default\_unknown).
+  4. **Style pass** (tone/quirks only; no new facts).
+  5. **TTS** renders the line.
+
+* **TTS** (Dia defaults):
+
+  * Script emitted with `[S1]/[S2]` tags; non‑verbals sparingly `(laughs)`.
+  * Segment length per output: 8–20s (Dia’s sweet spot).
+  * **Voice prompting**: 5–10s consented reference clip per avatar + transcript to stabilize timbre; or fix seed.
+  * Mix to −16 LUFS, add stingers between phases.
+
+> Guardrails: every factual sentence requires a citation; if missing → rewrite or “I don’t know based on my sources.”
+
+## D) Assets & publish
+
+* **Master audio** (WAV) + MP3/Opus.
+* **Transcript** (JSON + VTT) with per‑sentence timestamps + citations.
+* **Episode page**: summary, chapters, clickable sources.
+
+---
+
+# APIs (copyable)
+
+```
+POST /avatars
+  { name?, tone_sliders?, seed_urls? } → { avatar_id, persona_yaml }
+
+POST /avatars/{id}/research
+  { topic, freshness_days=120, whitelist_policy="default" }
+  → { bundle_id, sources_used[], coverage_stats }
+
+POST /episodes
+  { topic, avatar_ids:[a1,a2], rundown_template? } → { episode_id }
+
+POST /episodes/{id}/run
+  { } → streams per-turn events {turn_id, text, citations, audio_url}
+
+POST /turns/{id}/retry
+  { reason: "unsupported"|"style"|"length" }
+
+GET  /episodes/{id}
+  → { audio_url, transcript_url, notes_md_url, sources[] }
+```
+
+---
+
+# Minimal data models
+
+**avatars/{id}.yaml**
+
+```yaml
+id: alex
+role: "Tech Ethicist"
+stance: "cautiously skeptical about surveillance"
+tone: "calm, precise"
+speech_quirks: ["history analogies", "asks short questions", "no jargon"]
+forbidden_topics: ["medical advice", "stock picks"]
+default_unknown: "I don't know based on my sources."
+retrieval:
+  k: 6
+  min_score: 0.25
+voice:
+  vendor: "dia"
+  ref_audio: "s3://voices/alex_ref.wav"
+```
+
+**bundle.json (per avatar, per phase)**
+
+```json
+{
+  "topic": "Face recognition in public spaces",
+  "snippets": [
+    {"id":"S1","text":"...prohibits real-time remote identification...","url":"europa.eu/...","date":"2024-12-18","trust":0.95},
+    {"id":"S2","text":"NIST FRVT 2024 showed...","url":"nist.gov/...","date":"2024-10-03","trust":0.9}
+  ],
+  "notes":["Conflict: older bias data vs newer accuracy gains"]
+}
+```
+
+---
+
+# Timing budgets (to actually hit 5–10 / 2–3 minutes)
+
+**Research (parallel per avatar)**
+
+* Search + fetch top 30 pages: \~60–120s
+* Clean + chunk + embed: \~60–120s
+* Rank + bundle: \~15–30s
+  **Total per avatar**: \~2.5–4.5 min → with two avatars in parallel: **\~3–6 min**
+  Add slack + warmups: you’re comfortably inside **5–10 min**.
+
+**Debate (2–3 min show)**
+
+* 10–14 turns × \~8–12s per turn.
+* Each turn gen:
+
+  * Retrieve (local): \~50–150ms
+  * LLM gen + verify + style: 0.8–1.5s (Flash/Mini models)
+  * TTS (Dia) per 8–12s line on 8GB GPU: typically < realtime per segment (batchable).
+* Wall‑clock: **\~60–120s** to synth full audio after text is ready.
+
+---
+
+# Tech picks (MVP)
+
+* **Search**: Tavily (clean results & citations) → fallback: SerpAPI→DDG/Bing.
+* **Scrape**: `trafilatura`, `readability-lxml`.
+* **Embeddings**: `e5-small` or `bge-small` (fast, ok quality).
+* **Vector**: FAISS (file‑backed index per avatar).
+* **LLMs**:
+
+  * Researcher (extractive), Verifier, Style → small models (Phi‑3.5‑mini / GPT‑4o‑mini / Gemini Flash).
+  * Commentator → small‑to‑mid (GPT‑4o‑mini / Gemini Flash); temp 0.2–0.3.
+* **TTS**: **Dia** (1.6B) on a single 8GB GPU (Lightning/RunPod). Keep a TTS adapter so Azure/Eleven/Coqui can be swapped per avatar if needed.
+* **Mixer**: `ffmpeg` + loudnorm; `pydub` for assembly.
+* **Frontend**: Next.js + simple queue status page.
+
+---
+
+# Cost snapshot (realistic MVP)
+
+* **GPU for Dia**: burst on 8GB card \~ \$0.20–\$0.35/hr. 1–2 hrs/episode → ≈ **\$0.20–\$0.70**.
+* **LLM** (Flash/Mini): **\$0.02–\$0.10/episode**.
+* **Hosting**: \$5–\$20/month (Render/Fly/Railway).
+* **Storage**: pennies/month on S3/B2.
+* **Total MVP**: comfortably **<\$25/month** at a couple episodes/week.
+
+---
+
+# Optional video/caricature (simple & fast)
+
+**Option A — Talking heads (open‑source, local)**
+
+* **SadTalker**: still photo → lip‑sync video from your audio.
+* **Wav2Lip**: similar; pair with neutral face images (original or stock).
+* **Pipeline**: pick avatar image → generate video from each turn → concatenate.
+
+**Option B — “Caricature” look**
+
+* Create a few stylized stills (cartoonized) via Stable Diffusion img2img or any off‑the‑shelf cartoonizer → animate with SadTalker; overlay waveform + subtitles.
+
+**Option C — Hosted (paid, trivial UX)**
+
+* D‑ID / HeyGen for fast talking‑head renders (cost per min). Use only if you want zero ops.
+
+> Safeguard: only use images/voices you own or have clear consent to use/clonally resemble.
+
+---
+
+# Risks & how we de‑risk
+
+* **Hallucinations** → strict separation: Researcher (facts only) → Commentator (opinions only from bundle) → Verifier (reject unsupported claims).
+* **Persona drift** → lock YAML + style pass; measure “persona adherence” score; remind on drift.
+* **Long TTS segments** (Dia speeds up) → auto‑chunk 8–20s and stitch.
+* **Low‑quality sources** → whitelist and recency gates; show sources in the UI.
+
+---
+
+# “Build it now” checklist
+
+* [ ] Choose stack (Node or Python) and deploy target (Lightning/RunPod for the GPU).
+* [ ] Add Tavily key; set `whitelist.yaml` and `freshness_days`.
+* [ ] Implement the **three agents** with the prompts we outlined (I can supply exact text).
+* [ ] Wire Dia TTS adapter + per‑avatar voice prompts.
+* [ ] Ship Producer UI: topic → personas → research timer → run → publish.
+
+If you want, I can draft the **repo scaffold + prompts + config files** exactly to this spec so you can copy it into Cursor and run the MVP.

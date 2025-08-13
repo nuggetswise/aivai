@@ -1,0 +1,32 @@
+# This file is intentionally left blank for Poetry project configuration.
+
+[tool.poetry]
+name = "ai-vs-ai-podcast"
+version = "0.1.0"
+description = "AI vs AI podcast MVP"
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+fastapi = "^0.110.0"
+pydantic = "^2.6.0"
+faiss-cpu = "^1.7.4"
+trafilatura = "^1.6.1"
+readability-lxml = "^0.8.1"
+sentence-transformers = "^2.6.1"
+transformers = "^4.41.2"
+requests = "^2.31.0"
+httpx = "^0.27.0"
+ffmpeg-python = "^0.2.0"
+pydub = "^0.25.1"
+openai = "^1.30.1"
+python-dotenv = "^1.0.1"
+uvicorn = {extras = ["standard"], version = "^0.29.0"}
+tqdm = "^4.66.4"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
