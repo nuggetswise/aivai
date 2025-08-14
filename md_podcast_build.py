@@ -56,8 +56,10 @@ def parse_segments(md: str):
         blocks.append({**current, "text": "\n".join(buf).strip()})
 
     for b in blocks:
-        text = "\n".join(t for t in b["text"].splitlines() if t.strip())
-        text = re.sub(r"\s+", " ", text).strip()
+        raw = "\n".join(t for t in b["text"].splitlines() if t.strip())
+        # Drop anything after a Sources header in this block
+        cut = raw.split("\n## Sources", 1)[0]
+        text = re.sub(r"\s+", " ", cut).strip()
         b["text"] = text
     return blocks
 
@@ -68,6 +70,32 @@ def load_voice_map(path: Path) -> Dict[str, str]:
         voices = data.get("voices") or {}
         return {str(k): str(v) for k, v in voices.items()}
     return {}
+
+
+def get_eleven_voices(api_key: str) -> List[Dict[str, str]]:
+    base = os.getenv("ELEVEN_BASE", "https://api.elevenlabs.io/v1")
+    url = f"{base}/voices"
+    headers = {"xi-api-key": api_key, "accept": "application/json"}
+    r = requests.get(url, headers=headers, timeout=20)
+    r.raise_for_status()
+    data = r.json() or {}
+    return data.get("voices", [])
+
+
+def resolve_voice_id(name_or_id: str, api_key: str) -> str:
+    if not name_or_id:
+        raise RuntimeError("Empty ElevenLabs voice mapping")
+    token = str(name_or_id).strip()
+    # Heuristic: if it looks like an ID (uuid-like), return as-is
+    if len(token) >= 20 or token.count('-') >= 1:
+        return token
+    # Otherwise, resolve by name
+    for v in get_eleven_voices(api_key):
+        if v.get("name", "").strip().lower() == token.lower():
+            vid = v.get("voice_id") or v.get("voiceId")
+            if vid:
+                return vid
+    raise RuntimeError(f"ElevenLabs voice not found for name: {token}")
 
 
 def eleven_tts(text: str, voice_id: str, api_key: str, model: str = "eleven_multilingual_v2") -> AudioSegment:
@@ -113,7 +141,11 @@ def build_subs(segments, audio_segments, out_srt: Path, out_vtt: Path, font: str
     t0 = 0
     for (seg_audio, speaker, section), seg in zip(audio_segments, segments):
         dur = len(seg_audio)
-        sentences = split_sentences(strip_citations(seg["text"])) or [strip_citations(seg["text"])]
+        # If a beat-aware structure is ever added to segments, consume per-beat text; fallback to full text
+        seg_text = seg.get("text") or ""
+        # Cut anything after a global Sources header if present
+        seg_text = seg_text.split("## Sources", 1)[0]
+        sentences = split_sentences(strip_citations(seg_text)) or [strip_citations(seg_text)]
         words = [max(1, len(s.split())) for s in sentences]
         total_words = sum(words) or 1
         acc = 0
@@ -200,15 +232,19 @@ def main(md_file: str, episode_slug: str, voices_cfg: Path, font: str, bg: str, 
         speaker = seg["speaker"]
         # Host sections map to "Host" if not explicitly mapped
         key = speaker if speaker in voice_map else ("Host" if seg["section"] in {"Intro", "Outro"} else speaker)
-        voice_id = voice_map.get(key)
+        name_or_id = voice_map.get(key)
         if no_tts:
             dur_ms = estimate_speech_ms(seg["text"]) + 400
             speech = AudioSegment.silent(duration=dur_ms)
             print(f"TTS: {speaker} / {seg['section']} (silent placeholder {dur_ms} ms)")
         else:
-            if not voice_id:
+            if not name_or_id:
                 raise SystemExit(f"No voice configured for speaker: {speaker} (key: {key})")
-            print(f"TTS: {speaker} / {seg['section']} …")
+            try:
+                voice_id = resolve_voice_id(name_or_id, api_key=api_key)
+            except Exception as e:
+                raise SystemExit(f"Failed to resolve ElevenLabs voice for {speaker} ({name_or_id}): {e}")
+            print(f"TTS: {speaker} / {seg['section']} … (voice_id={voice_id})")
             speech = eleven_tts(seg["text"], voice_id, api_key=api_key, model=model)
         audio_parts.append((speech, speaker, seg["section"]))
 

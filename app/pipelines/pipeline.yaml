@@ -58,12 +58,7 @@ agents:
               confidence: { type: number }
         contradictions: { type: array }
         omissions: { type: array }
-    system_prompt: |
-      You are a fact-only researcher.
-      Use ONLY the provided excerpts from the web and the local seed corpus.
-      Quote or tightly paraphrase; attach [S#] for web and [L#] for local after each claim.
-      Flag contradictions and stale data.
-      Do NOT add opinions.
+    system_prompt_file: "app/prompts/researcher.txt"
 
   commentator:
     description: "Generates persona-locked debate turn from evidence bundle"
@@ -83,13 +78,7 @@ agents:
       properties:
         text: { type: string }
         citations: { type: array, items: { type: string } }
-    system_prompt: |
-      You are {{ persona.name }}, a {{ persona.role }}.
-      Speak in {{ persona.tone }} with quirks: {{ persona.speech_quirks | join(", ") }}.
-      Use only the evidence claims provided. No new facts.
-      If unsupported, say: "{{ persona.default_unknown }}".
-      Every factual sentence MUST have a bracketed citation like [S1] or [L2].
-      End with one concise takeaway.
+    system_prompt_file: "app/prompts/commentator.txt"
 
   verifier:
     description: "Checks factual support for each sentence and fixes or removes unsupported claims"
@@ -119,20 +108,17 @@ agents:
       type: object
       properties:
         verified_text: { type: string }
-        persona: { type: object }
+        persona: { type: string }
     output_schema:
       type: object
       properties:
         styled_text: { type: string }
-    system_prompt: |
-      Adjust only style to fit {{ persona.name }}'s tone and quirks.
-      Do not change facts or citations.
-      Keep all citations intact.
+    system_prompt_file: "app/prompts/style.txt"
 
   tts:
-    description: "Synthesizes audio for the final styled text using Dia TTS"
+    description: "Synthesizes audio for the final styled text using configured TTS adapter"
     model: local
-    run: python app/tts/dia_synth.py --text "{{ styled_text }}" --ref "{{ persona.voice.ref_audio }}" --speaker_tag "{{ persona.voice.speaker_tag }}"
+    run: python app/tts/adapter.py --text "{{ styled_text }}" --persona "{{ persona }}"
     input_schema:
       type: object
       properties:
