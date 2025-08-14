@@ -104,12 +104,16 @@ def split_sentences(text: str) -> List[str]:
     return [x.strip() for x in s if x.strip()]
 
 
+def strip_citations(text: str) -> str:
+    return re.sub(r"\[(?:S|L|R)\d+\]", "", text)
+
+
 def build_subs(segments, audio_segments, out_srt: Path, out_vtt: Path, font: str):
     subs = pysubs2.SSAFile()
     t0 = 0
     for (seg_audio, speaker, section), seg in zip(audio_segments, segments):
         dur = len(seg_audio)
-        sentences = split_sentences(seg["text"]) or [seg["text"]]
+        sentences = split_sentences(strip_citations(seg["text"])) or [strip_citations(seg["text"])]
         words = [max(1, len(s.split())) for s in sentences]
         total_words = sum(words) or 1
         acc = 0

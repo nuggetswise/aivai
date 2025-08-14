@@ -1,7 +1,7 @@
-data/indices/*.db filter=lfs diff=lfs merge=lfs -text
-data/indices/*.index filter=lfs diff=lfs merge=lfs -text
 output/**/*.mp3 filter=lfs diff=lfs merge=lfs -text
 output/**/*.mp4 filter=lfs diff=lfs merge=lfs -text
 output/**/*.wav filter=lfs diff=lfs merge=lfs -text
 data/audio/**/* filter=lfs diff=lfs merge=lfs -text
 data/voices/**/* filter=lfs diff=lfs merge=lfs -text
+data/indices/*.db filter=lfs diff=lfs merge=lfs -text
+data/indices/*.index filter=lfs diff=lfs merge=lfs -text

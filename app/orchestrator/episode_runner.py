@@ -156,6 +156,8 @@ class EpisodeRunner:
         """Run a single debate phase with alternating turns"""
         turn_count = 0
         current_avatar = "A1"  # Start with Avatar A
+        last_intro_texts: Dict[str, str] = {}
+        last_outro_texts: Dict[str, str] = {}
         
         while turn_count < max_turns:
             # Determine which avatar is speaking
@@ -179,6 +181,42 @@ class EpisodeRunner:
                 opponent_summary=self._get_opponent_summary(episode, opponent_avatar.id)
             )
             
+            # Enforce non-mirroring intros/outros with a simple similarity guard
+            try:
+                if intent == TurnIntent.OPENING:
+                    other_key = "A2" if current_avatar == "A1" else "A1"
+                    other_text = last_intro_texts.get(other_key, "")
+                    sim = self._text_similarity(turn.text, other_text)
+                    if sim > 0.85 and other_text:
+                        logger.info("Regenerating opening to avoid mirroring (similarity %.2f)", sim)
+                        # Regenerate once with same inputs; downstream prompt variation should change hook
+                        turn = await self._generate_turn(
+                            episode=episode,
+                            avatar=avatar,
+                            avatar_key=current_avatar,
+                            phase=phase,
+                            intent=intent,
+                            opponent_summary=self._get_opponent_summary(episode, opponent_avatar.id)
+                        )
+                    last_intro_texts[current_avatar] = turn.text
+                elif intent == TurnIntent.CLOSING:
+                    other_key = "A2" if current_avatar == "A1" else "A1"
+                    other_text = last_outro_texts.get(other_key, "")
+                    sim = self._text_similarity(turn.text, other_text)
+                    if sim > 0.85 and other_text:
+                        logger.info("Regenerating closing to avoid mirroring (similarity %.2f)", sim)
+                        turn = await self._generate_turn(
+                            episode=episode,
+                            avatar=avatar,
+                            avatar_key=current_avatar,
+                            phase=phase,
+                            intent=intent,
+                            opponent_summary=self._get_opponent_summary(episode, opponent_avatar.id)
+                        )
+                    last_outro_texts[current_avatar] = turn.text
+            except Exception as sg:
+                logger.warning(f"Similarity guard skipped due to error: {sg}")
+
             episode.turns.append(turn)
             
             yield {"event": "turn_complete", "data": {
@@ -292,6 +330,21 @@ class EpisodeRunner:
         )
         
         return turn
+    
+    @staticmethod
+    def _text_similarity(a: str, b: str) -> float:
+        """Lightweight similarity: token Jaccard over lowercased words."""
+        try:
+            import re
+            ta = set(re.findall(r"[a-z0-9']+", (a or '').lower()))
+            tb = set(re.findall(r"[a-z0-9']+", (b or '').lower()))
+            if not ta or not tb:
+                return 0.0
+            inter = len(ta & tb)
+            base = max(1, min(len(ta), len(tb)))
+            return inter / base
+        except Exception:
+            return 0.0
     
     def _load_avatar(self, avatar_path: str) -> Avatar:
         """Load avatar from YAML file"""
