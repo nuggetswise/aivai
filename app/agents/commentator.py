@@ -85,19 +85,39 @@ class CommentatorAgent:
         if commentator_input.opponent_summary:
             opponent_context = f"Your opponent recently argued: {commentator_input.opponent_summary}"
         
-        # Phase-specific guidance
+        # Phase-specific guidance with simple hook rotation hints (persona-aware)
         phase_guidance = {
             EpisodePhase.OPENING: "Provide a clear introduction to your position.",
             EpisodePhase.POSITIONS: "Present your main arguments with strong evidence.",
             EpisodePhase.CROSSFIRE: "Address counterarguments and strengthen your position.",
             EpisodePhase.CLOSING: "Summarize your key points and provide a compelling conclusion."
         }
+
+        # Lightweight, deterministic hook style suggestion per persona and topic
+        import hashlib
+        seed = f"{commentator_input.topic}|{commentator_input.persona.name}|{commentator_input.intent.value}"
+        h = int(hashlib.sha256(seed.encode("utf-8")).hexdigest()[:2], 16)
+        # Persona-aware buckets (kept disjoint across typical personas)
+        alexish_hooks = ["definition-first", "historical analogy", "research statistic"]
+        novaish_hooks = ["trending example", "real user story", "sharp contrast"]
+        # Fallback neutral hooks
+        neutral_hooks = ["define terms", "compelling example", "evidence lead", "question lead"]
+        role_lower = (commentator_input.persona.role or "").lower()
+        tone_lower = (commentator_input.persona.tone or "").lower()
+        if ("academic" in role_lower) or ("measured" in tone_lower):
+            hook_pool = alexish_hooks
+        elif ("culture" in role_lower) or ("energetic" in tone_lower):
+            hook_pool = novaish_hooks
+        else:
+            hook_pool = neutral_hooks
+        hook_style = hook_pool[h % len(hook_pool)] if hook_pool else "define terms"
         
         return {
             'evidence_points': evidence_points,
             'available_citations': available_citations,
             'opponent_context': opponent_context,
             'phase_guidance': phase_guidance.get(commentator_input.phase, "Present your perspective clearly."),
+            'hook_style': hook_style,
             'contradictions': commentator_input.evidence_bundle.contradictions
         }
     
@@ -133,12 +153,17 @@ DEBATE CONTEXT:
 - Intent: {commentator_input.intent.value}
 - {context['phase_guidance']}
 
-{context['opponent_context']}
+ {context['opponent_context']}
 
 AVAILABLE EVIDENCE:
 {evidence_text}
 
-Generate a debate turn that reflects your persona while strictly using only the provided evidence."""
+Generate a debate turn that reflects your persona while strictly using only the provided evidence.
+
+OPENING/CLOSING STYLE (if applicable):
+- For opening/closing, prefer a "{context['hook_style']}" hook for this episode.
+- Avoid mirroring the other speaker's phrasing or hook type; vary across episodes.
+"""
         
         # User prompt
         user_prompt = f"""Topic: {commentator_input.topic}

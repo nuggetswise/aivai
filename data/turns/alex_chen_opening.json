@@ -2,44 +2,139 @@
   "topic": "Grok recent image generation",
   "avatar": "Alex Chen",
   "evidence_bundle": {
-    "id": "12b449cc-7ab9-4cbb-be13-52cd21d7d2d2",
+    "id": "62282fae-844e-477b-8702-b54028d1ef6e",
     "topic": "Grok recent image generation",
     "query": "Grok recent image generation evidence and analysis",
     "claims": [
       {
-        "text": "Grok 2.0: Discover the next generation of image creation with the best AI image generator, Grok AI Image Generator, now featuring support for Flux.1 Pro, Flux.1 Dev, and Flux.1 Schnell models. Try this AI image generator tool online for business-ready solutions!\n\nYour data is safe with us. We prioritize security and privacy in every step of the process. ## Ignite Your Imagination with Grok Image Generator Unleash your creativity with Grok Image Generator! Our fun and intuitive tools make it easy...",
+        "text": "Grok Imagine, xAI\u2019s new AI image and video generator, lets you make NSFW content | TechCrunch Grok Imagine, xAI\u2019s new AI image and video generator, lets you make NSFW content | TechCrunch\n\n**Image Credits:**Klaudia Radecka/NurPhoto / Getty Images Grok Imagine, xAI\u2019s new AI image and video generator, lets you make NSFW content ================================================================================\n\nElon Musk\u2019s AI company has officially rolled out Grok Imagine, xAI\u2019s image and video gener...",
+        "citations": [
+          {
+            "id": "S1",
+            "type": "web",
+            "url": "https://techcrunch.com/2025/08/04/grok-imagine-xais-new-ai-image-and-video-generator-lets-you-make-nsfw-content/",
+            "title": "Grok Imagine, xAI's new AI image and video generator, lets ...",
+            "excerpt": "Grok Imagine, xAI's new AI image and video generator, lets you make NSFW content. Rebecca Bellan. 8:04 AM PDT \u00b7 August 4, 2025....",
+            "confidence": 0.98552,
+            "timestamp": "2025-08-14 01:37:12.039287",
+            "trust_score": 0.7
+          }
+        ],
+        "confidence": 0.98552,
+        "contradictions": [],
+        "supporting_evidence": [],
+        "topic_relevance": 1.0
+      },
+      {
+        "text": "xAI\u2019s new Grok image and video generator has a \u2018spicy\u2019 mode | The Verge xAI\u2019s new Grok image and video generator has a \u2018spicy\u2019 mode Posts from this topic will be added to your daily email digest and your homepage feed. Posts from this topic will be added to your daily email digest and your homepage feed. Posts from this topic will be added to your daily email digest and your homepage feed. xAI\u2019s new Grok image and video generator has a \u2018spicy\u2019 mode ===============================================...",
+        "citations": [
+          {
+            "id": "S2",
+            "type": "web",
+            "url": "https://www.theverge.com/news/718795/xai-grok-imagine-video-generator-spicy-mode",
+            "title": "xAI's new Grok image and video generator has a 'spicy' mode",
+            "excerpt": "Grok Imagine includes text-to-image capabilities that allow users to generate pictures based on descriptions, or an image-to-video tool to make...",
+            "confidence": 0.9855,
+            "timestamp": "2025-08-14 01:36:54.204068",
+            "trust_score": 0.7
+          }
+        ],
+        "confidence": 0.9855,
+        "contradictions": [],
+        "supporting_evidence": [],
+        "topic_relevance": 1.0
+      },
+      {
+        "text": "xAI\u2019s new Grok image and video generator has a \u2018spicy\u2019 mode | The Verge xAI\u2019s new Grok image and video generator has a \u2018spicy\u2019 mode Posts from this topic will be added to your daily email digest and your homepage feed. Posts from this topic will be added to your daily email digest and your homepage feed. Posts from this topic will be added to your daily email digest and your homepage feed. xAI\u2019s new Grok image and video generator has a \u2018spicy\u2019 mode ===============================================...",
+        "citations": [
+          {
+            "id": "S3",
+            "type": "web",
+            "url": "https://www.theverge.com/news/718795/xai-grok-imagine-video-generator-spicy-mode",
+            "title": "xAI's new Grok image and video generator has a 'spicy' mode",
+            "excerpt": "Grok Imagine includes text-to-image capabilities that allow users to generate pictures based on descriptions, or an image-to-video tool to make...",
+            "confidence": 0.98464,
+            "timestamp": "2025-08-14 01:37:12.043892",
+            "trust_score": 0.7
+          }
+        ],
+        "confidence": 0.98464,
+        "contradictions": [],
+        "supporting_evidence": [],
+        "topic_relevance": 1.0
+      },
+      {
+        "text": "Grok launches AI image generator with a NSFW 'spicy mode' \u2014 it's exactly what you'd expect | Tom's Guide\n\nGrok launches AI image generator with a NSFW 'spicy mode' \u2014 it's exactly what you'd expect ==========================================================================================\n\nElon Musk and the team at xAI seemingly want to position Grok as the boundary-pushing AI tool that's not afraid to get a little R-rated when you prompt it. > When you toggle on \"spicy mode\", Grok Imagine will st...",
+        "citations": [
+          {
+            "id": "S4",
+            "type": "web",
+            "url": "https://www.tomsguide.com/ai/grok-launches-ai-image-generator-with-a-nsfw-spicy-mode-its-exactly-what-youd-expect",
+            "title": "Grok launches AI image generator with a NSFW 'spicy mode'",
+            "excerpt": "When it comes to image generation, Grok Imagine lets users choose from styles including photorealism, animation or anime. Videos are subdivided...",
+            "confidence": 0.98142,
+            "timestamp": "2025-08-14 01:36:54.209529",
+            "trust_score": 0.7
+          }
+        ],
+        "confidence": 0.98142,
+        "contradictions": [],
+        "supporting_evidence": [],
+        "topic_relevance": 1.0
+      },
+      {
+        "text": "X Image Generator is an advanced AI-powered text-to-image generation tool that transforms textual descriptions into high-quality images. Built on cutting-edge AI technology from Grok, it excels at understanding and interpreting complex visual concepts. The system employs a sophisticated neural network approach, enabling precise control over image generation while maintaining high efficiency. This architecture ensures exceptional prompt adherence and consistent quality across various visual style...",
         "citations": [
           {
             "id": "S5",
             "type": "web",
-            "url": "https://grokaiimagegenerator.org/",
-            "title": "Grok AI Image Generator | Next-Gen AI Art Creation",
-            "excerpt": "Grok AI Logo\n\n# ChatGPT Image Generator\n\nGrok 2.0: Discover the next generation of image creation with the best AI image generator, Grok AI Image Generator, now featuring support for Flux.1 Pro, Flux....",
-            "confidence": 0.7343678,
-            "timestamp": "2025-08-14 00:49:30.217412",
+            "url": "https://ximagegenerator.com/",
+            "title": "X Image Generator - Grok AI",
+            "excerpt": "X Image Generator is an advanced AI-powered text-to-image generation tool that transforms textual descriptions into high-quality images....",
+            "confidence": 0.98003,
+            "timestamp": "2025-08-14 01:36:54.211103",
             "trust_score": 0.7
           }
         ],
-        "confidence": 0.7343678,
+        "confidence": 0.98003,
         "contradictions": [],
         "supporting_evidence": [],
         "topic_relevance": 1.0
       },
       {
-        "text": "Grok Imagine: How to Create Images with Grok AI Image Generator | PERFECT Grok Imagine: How to Create Images with Grok AI Image Generator Grok Imagine: How to Create Images with Grok AI Image Generator ===============================================================\n\n**Grok Imagine is xAI\u2019s AI-powered tool for generating images and videos from text prompts or uploaded images.** Available on the Grok iOS/Android apps and X platform (primarily for SuperGrok Heavy or Premium+ X subscribers), it uses...",
+        "text": "Grok Imagine, xAI\u2019s new AI image and video generator, lets you make NSFW content | TechCrunch Grok Imagine, xAI\u2019s new AI image and video generator, lets you make NSFW content | TechCrunch\n\n**Image Credits:**Klaudia Radecka/NurPhoto / Getty Images Grok Imagine, xAI\u2019s new AI image and video generator, lets you make NSFW content ================================================================================\n\nElon Musk\u2019s AI company has officially rolled out Grok Imagine, xAI\u2019s image and video gener...",
         "citations": [
           {
-            "id": "S1",
+            "id": "S6",
             "type": "web",
-            "url": "https://www.perfectcorp.com/consumer/blog/generative-AI/grok-image-generator",
-            "title": "Grok Imagine: How to Create Images with Grok AI Image Generator",
-            "excerpt": "Current Status: As of July 2025, Grok 4 supports text and vision modalities, with image generation capabilities expected to be fully integrated soon. It can already take images as input for analysis a...",
-            "confidence": 0.79939574,
-            "timestamp": "2025-08-14 00:49:57.705221",
+            "url": "https://techcrunch.com/2025/08/04/grok-imagine-xais-new-ai-image-and-video-generator-lets-you-make-nsfw-content/",
+            "title": "Grok Imagine, xAI's new AI image and video generator ... - TechCrunch",
+            "excerpt": "Grok Imagine, xAI's new AI image and video generator, lets you make NSFW content \u00b7 Co-founder of Elon Musk's xAI departs the company....",
+            "confidence": 0.97988,
+            "timestamp": "2025-08-14 01:36:54.213373",
             "trust_score": 0.7
           }
         ],
-        "confidence": 0.79939574,
+        "confidence": 0.97988,
+        "contradictions": [],
+        "supporting_evidence": [],
+        "topic_relevance": 1.0
+      },
+      {
+        "text": "Grok App Adds AI Image and Video Generator With NSFW 'Spicy' Mode | PCMag Grok App Adds AI Image and Video Generator With NSFW 'Spicy' Mode ================================================================= Grok Imagine lets you generate AI images and videos from text prompts. The results aren't always accurate, but Elon Musk says it will get better 'almost every day.' To get started, tap the new \u201cImagine\u201d tab at the top. If you're asked to join a waitlist, don't worry; you'll get through in a ma...",
+        "citations": [
+          {
+            "id": "S4",
+            "type": "web",
+            "url": "https://www.pcmag.com/news/grok-app-adds-ai-image-and-video-generator-with-nsfw-spicy-mode",
+            "title": "Grok App Adds AI Image and Video Generator With NSFW ...",
+            "excerpt": "Grok Imagine lets you generate AI images and videos from text prompts. The results aren't always accurate, but Elon Musk says it will get better...",
+            "confidence": 0.97879,
+            "timestamp": "2025-08-14 01:37:12.046602",
+            "trust_score": 0.7
+          }
+        ],
+        "confidence": 0.97879,
         "contradictions": [],
         "supporting_evidence": [],
         "topic_relevance": 1.0
@@ -51,71 +146,14 @@
             "id": "S1",
             "type": "web",
             "url": "https://x.ai/news/grok-image-generation-release",
-            "title": "Grok Image Generation Release | xAI",
-            "excerpt": "Grok Image Generation Release | xAI\n\n===============\n\n[](\n   Grok\n   API\n   Company\n   Colossus\n   Careers\n   News\n\nTry Grok\n\n[](\n\nDecember 09, 2024\n\nGrok Image Generation Release\n--------------------...",
-            "confidence": 0.8003337,
-            "timestamp": "2025-08-14 00:49:30.214568",
+            "title": "Grok Image Generation Release",
+            "excerpt": "Grok can now generate high-quality images across several domains where other image generation models often struggle. It can render precise...",
+            "confidence": 0.98569,
+            "timestamp": "2025-08-14 01:36:54.201113",
             "trust_score": 0.6
           }
         ],
-        "confidence": 0.8003337,
-        "contradictions": [],
-        "supporting_evidence": [],
-        "topic_relevance": 1.0
-      },
-      {
-        "text": "We are updating Grok's capabilities with a new autoregressive image generation model, code-named Aurora, available on the \ud835\udd4f platform. We've enhanced Grok's image generation abilities with a new model, code-named Aurora. Aurora is an autoregressive mixture-of-experts network trained to predict the next token from interleaved text and image data. We trained the model on billions of examples from the internet, giving it a deep understanding of the world. As a result, it excels at photorealistic ren...",
-        "citations": [
-          {
-            "id": "S2",
-            "type": "web",
-            "url": "https://x.ai/news/grok-image-generation-release",
-            "title": "Grok Image Generation Release | xAI",
-            "excerpt": "Grok Image Generation Release | xAI\n\n===============\n\n[](\n   Grok\n   API\n   Company\n   Colossus\n   Careers\n   News\n\nTry Grok\n\n[](\n\nDecember 09, 2024\n\nGrok Image Generation Release\n--------------------...",
-            "confidence": 0.7999589,
-            "timestamp": "2025-08-14 00:49:43.446122",
-            "trust_score": 0.6
-          }
-        ],
-        "confidence": 0.7999589,
-        "contradictions": [],
-        "supporting_evidence": [],
-        "topic_relevance": 1.0
-      },
-      {
-        "text": "We are excited to announce Grok For Government \u2013 a suite of frontier AI products available first to United States Government customers. We are thrilled to unveil an early preview of Grok 3, our most advanced model yet, blending superior reasoning with extensive pretraining knowledge. Grok is now faster, sharper, and has improved multilingual support. It is available to everyone on the \ud835\udd4f platform. We are updating Grok's capabilities with a new autoregressive image generation model, code-named Aur...",
-        "citations": [
-          {
-            "id": "S1",
-            "type": "web",
-            "url": "https://x.ai/news",
-            "title": "News | xAI",
-            "excerpt": "#### Grok Image Generation Release\nWe are updating Grok's capabilities with a new autoregressive image generation model, code-named Aurora, available on the \ud835\udd4f platform.\n\nDecember 09, 2024\n\nREAD\n\nAPI P...",
-            "confidence": 0.8194462,
-            "timestamp": "2025-08-14 00:49:43.444797",
-            "trust_score": 0.6
-          }
-        ],
-        "confidence": 0.8194462,
-        "contradictions": [],
-        "supporting_evidence": [],
-        "topic_relevance": 1.0
-      },
-      {
-        "text": "Grok 3 Free AI Image Generator Guide: Intro, Prompts & Alternative Tools Grok 3 Free AI Image Generator Guide: Intro, Prompts & Alternative Tools ======================================================================== With the rise of advanced AI tools like ChatGPT, DeepSeek, and Le Chat, the latest entry\u2014Grok 3\u2014has sparked interest with its AI-powered image generator. Developed by xAI, Grok 3 enhances text-based interactions and introduces a cutting-edge image generation model.\n\nGrok 3\u2019s AI ca...",
-        "citations": [
-          {
-            "id": "S2",
-            "type": "web",
-            "url": "https://www.cyberlink.com/blog/photo-editing-tips/3514/grok3-image-generator?srsltid=AfmBOorsPkXWYXj6UPAH9b8v31FRHZWFYqPMlSTTXUvImaHqUGMmaync",
-            "title": "Grok 3 Free AI Image Generator Guide: Intro, Prompts & Alternative ...",
-            "excerpt": "With the rise of advanced AI tools like ChatGPT, DeepSeek, and Le Chat, the latest entry\u2014Grok 3\u2014has sparked interest with its AI-powered image generator. Developed by xAI, Grok 3 enhances text-based i...",
-            "confidence": 0.78552294,
-            "timestamp": "2025-08-14 00:49:30.216196",
-            "trust_score": 0.7
-          }
-        ],
-        "confidence": 0.78552294,
+        "confidence": 0.98569,
         "contradictions": [],
         "supporting_evidence": [],
         "topic_relevance": 1.0
@@ -124,112 +162,74 @@
         "text": "Grok 4 has emerged as a transformative tool in the landscape of AI-generated visuals, providing users with a new way to create high-quality images. With its advancements over Grok 3, Grok 4 is designed to blend innovative technology with user-friendly experiences.\n\nLaunched on July 9, 2025, Grok 4 incorporates sophisticated multimodal capabilities, focusing primarily on text-based interactions and advanced reasoning. Although the image generation functionalities are still being developed, users ...",
         "citations": [
           {
-            "id": "S2",
+            "id": "S3",
             "type": "web",
             "url": "https://datatunnel.io/revolutionizing-ai-image-generation-with-grok-4/",
             "title": "Revolutionizing AI Image Generation with Grok 4 - Datatunnel",
-            "excerpt": "Current Status: As of now, Grok 4 supports accommodating both text and vision modalities, and its image generation will soon be fully integrated. It can also analyze and edit images provided as input,...",
-            "confidence": 0.7795405,
-            "timestamp": "2025-08-14 00:49:57.706731",
+            "excerpt": "Key Features of Grok 4's Image Generation:  Current Status: As of now, Grok 4 supports accommodating both text and vision modalities, and its image generation will soon be fully integrated . It can al...",
+            "confidence": 0.9853,
+            "timestamp": "2025-08-14 01:36:54.205449",
             "trust_score": 0.6
           }
         ],
-        "confidence": 0.7795405,
+        "confidence": 0.9853,
         "contradictions": [],
         "supporting_evidence": [],
         "topic_relevance": 1.0
       },
       {
-        "text": "# Everything You Need to Know About Grok 2 Image Generator! - Tutorial & Prompts We now have access to X's new image generation capabilities in Grok 2. The Flux AI model has been integrated into Grok and it can generate some pretty cool images extremely fast. One major benefit of the Grok 2 image generator is that there is almost no censorship at all. To access Grok 2 early access, you'll need get a premium subscription on X (formerly Twitter)",
+        "text": "We are updating Grok's capabilities with a new autoregressive image generation model, code-named Aurora, available on the \ud835\udd4f platform. We've enhanced Grok's image generation abilities with a new model, code-named Aurora. Aurora is an autoregressive mixture-of-experts network trained to predict the next token from interleaved text and image data. We trained the model on billions of examples from the internet, giving it a deep understanding of the world. As a result, it excels at photorealistic ren...",
         "citations": [
           {
-            "id": "S3",
+            "id": "S2",
             "type": "web",
-            "url": "https://www.youtube.com/watch?v=imIbb2CougY",
-            "title": "Everything You Need to Know About Grok 2 Image Generator!",
-            "excerpt": "# Everything You Need to Know About Grok 2 Image Generator! - Tutorial & Prompts\n## Tao Prompts\n106000 subscribers\n446 likes\n\n### Description\n33995 views\nPosted: 17 Aug 2024\nWe now have access to X's ...",
-            "confidence": 0.7613083,
-            "timestamp": "2025-08-14 00:49:30.216359",
-            "trust_score": 0.7
+            "url": "https://x.ai/news/grok-image-generation-release",
+            "title": "Grok Image Generation Release | xAI",
+            "excerpt": "We are updating Grok's capabilities with a new autoregressive image generation model, code-named Aurora, available on the X platform....",
+            "confidence": 0.98508,
+            "timestamp": "2025-08-14 01:37:12.040553",
+            "trust_score": 0.6
           }
         ],
-        "confidence": 0.7613083,
+        "confidence": 0.98508,
         "contradictions": [],
         "supporting_evidence": [],
         "topic_relevance": 1.0
       },
       {
-        "text": "Elon Musk and the team at xAI seemingly want to position Grok as the boundary-pushing AI tool that's not afraid to get a little R-rated when you prompt it. When you toggle on \"spicy mode\", Grok Imagine will start coming up with sexualized content and partial nudity Videos are subdivided into four modes: Custom, Normal, Fun and Spicy. The last one, as you can imagine, has the biggest potential for controversy and misuse. According to reports from those that have tried it, when you toggle on \"spic...",
-        "citations": [
-          {
-            "id": "S3",
-            "type": "web",
-            "url": "https://www.tomsguide.com/ai/grok-launches-ai-image-generator-with-a-nsfw-spicy-mode-its-exactly-what-youd-expect",
-            "title": "Grok launches AI image generator with a NSFW 'spicy mode'",
-            "excerpt": "Get instant access to breaking news, the hottest reviews, great deals and helpful tips.\n\nImagine with @Grok pic.twitter.com/UIay5yNp97August 4, 2025\n\nGrok has grown in scope and scale over the last ye...",
-            "confidence": 0.7507177,
-            "timestamp": "2025-08-14 00:49:43.446960",
-            "trust_score": 0.7
-          }
-        ],
-        "confidence": 0.7507177,
-        "contradictions": [],
-        "supporting_evidence": [],
-        "topic_relevance": 1.0
-      },
-      {
-        "text": "Elon Musk and the team at xAI seemingly want to position Grok as the boundary-pushing AI tool that's not afraid to get a little R-rated when you prompt it. When you toggle on \"spicy mode\", Grok Imagine will start coming up with sexualized content and partial nudity Videos are subdivided into four modes: Custom, Normal, Fun and Spicy. The last one, as you can imagine, has the biggest potential for controversy and misuse. According to reports from those that have tried it, when you toggle on \"spic...",
-        "citations": [
-          {
-            "id": "S4",
-            "type": "web",
-            "url": "https://www.tomsguide.com/ai/grok-launches-ai-image-generator-with-a-nsfw-spicy-mode-its-exactly-what-youd-expect",
-            "title": "Grok launches AI image generator with a NSFW 'spicy mode'",
-            "excerpt": "Get instant access to breaking news, the hottest reviews, great deals and helpful tips.\n\nImagine with @Grok pic.twitter.com/UIay5yNp97August 4, 2025\n\nGrok has grown in scope and scale over the last ye...",
-            "confidence": 0.74697095,
-            "timestamp": "2025-08-14 00:49:30.216659",
-            "trust_score": 0.7
-          }
-        ],
-        "confidence": 0.74697095,
-        "contradictions": [],
-        "supporting_evidence": [],
-        "topic_relevance": 1.0
-      },
-      {
-        "text": "Posts from this topic will be added to your daily email digest and your homepage feed. Posts from this topic will be added to your daily email digest and your homepage feed. Posts from this topic will be added to your daily email digest and your homepage feed. # xAI\u2019s new Grok image and video generator has a \u2018spicy\u2019 mode\n\nPosts from this author will be added to your daily email digest and your homepage feed. Posts from this author will be added to your daily email digest and your homepage feed. ...",
-        "citations": [
-          {
-            "id": "S4",
-            "type": "web",
-            "url": "https://www.theverge.com/news/718795/xai-grok-imagine-video-generator-spicy-mode",
-            "title": "xAI's new Grok image and video generator has a 'spicy' mode",
-            "excerpt": "The image generation is less restrictive. Users can generate a variety of styles, including photorealism, anime, and illustrations, and it features a voice mode that allows prompts to be spoken rather...",
-            "confidence": 0.7001783,
-            "timestamp": "2025-08-14 00:49:43.448288",
-            "trust_score": 0.7
-          }
-        ],
-        "confidence": 0.7001783,
-        "contradictions": [],
-        "supporting_evidence": [],
-        "topic_relevance": 1.0
-      },
-      {
-        "text": "# Grok App Adds AI Image and Video Generator With NSFW 'Spicy' Mode Grok Imagine lets you generate AI images and videos from text prompts. The results aren't always accurate, but Elon Musk says it will get better 'almost every day.' To get started, tap the new \u201cImagine\u201d tab at the top. If you're asked to join a waitlist, don't worry; you'll get through in a matter of minutes. Next, enter a text prompt or upload an image from your library to turn it into AI art. The content generation is ridiculo...",
+        "text": "# Grok Imagine Goes WILD: The Spicy Update That's Breaking All Rules! Grok's update is called Imagine and although it's currently only available on the phone app, it's impressive. Images and video both generate faster then any other model right now. Although it may not generate the most realistic style images yet, it's only a matter of time because this will only get better.",
         "citations": [
           {
             "id": "S5",
             "type": "web",
-            "url": "https://www.pcmag.com/news/grok-app-adds-ai-image-and-video-generator-with-nsfw-spicy-mode",
-            "title": "Grok App Adds AI Image and Video Generator With NSFW 'Spicy ...",
-            "excerpt": "After adding a pornographic AI Companion last month, Elon Musk's Grok app now has an AI image and video generator that lets you create \"Spicy\" content.\n\nThe Imagine feature is currently available on m...",
-            "confidence": 0.6944897,
-            "timestamp": "2025-08-14 00:49:43.450053",
+            "url": "https://www.youtube.com/watch?v=SjEGtR3457Y",
+            "title": "Grok Imagine Goes WILD: The Spicy Update That's Breaking All Rules!",
+            "excerpt": "Images and video both generate faster then any other model right now. ... \ud83d\uddde OUT NOW: Subscribe to my newsletter for new prompts, AI news and 10x...",
+            "confidence": 0.97691,
+            "timestamp": "2025-08-14 01:37:12.047147",
             "trust_score": 0.7
           }
         ],
-        "confidence": 0.6944897,
+        "confidence": 0.97691,
+        "contradictions": [],
+        "supporting_evidence": [],
+        "topic_relevance": 1.0
+      },
+      {
+        "text": "Grok launches AI image generator with a NSFW 'spicy mode' \u2014 it's exactly what you'd expect | Tom's Guide\n\nGrok launches AI image generator with a NSFW 'spicy mode' \u2014 it's exactly what you'd expect ==========================================================================================\n\nElon Musk and the team at xAI seemingly want to position Grok as the boundary-pushing AI tool that's not afraid to get a little R-rated when you prompt it. > When you toggle on \"spicy mode\", Grok Imagine will st...",
+        "citations": [
+          {
+            "id": "S6",
+            "type": "web",
+            "url": "https://www.tomsguide.com/ai/grok-launches-ai-image-generator-with-a-nsfw-spicy-mode-its-exactly-what-youd-expect",
+            "title": "Grok launches AI image generator with a NSFW 'spicy mode'",
+            "excerpt": "When it comes to image generation, Grok Imagine lets users choose from styles including photorealism, animation or anime. Videos are subdivided...",
+            "confidence": 0.97463,
+            "timestamp": "2025-08-14 01:37:12.051272",
+            "trust_score": 0.7
+          }
+        ],
+        "confidence": 0.97463,
         "contradictions": [],
         "supporting_evidence": [],
         "topic_relevance": 1.0
@@ -237,59 +237,90 @@
     ],
     "contradictions": [],
     "omissions": [
-      "Based on the provided evidence, here are some key omissions and gaps:",
-      "**Performance Benchmarks and Technical Specifications:** There is a lack of objective performance data for Grok's image generation capabilities, particularly Grok 3 and Grok 4. While the sources mention improvements and advancements, there are no quantifiable metrics (e.g., FID scores, CLIP scores, human evaluation results) from independent evaluations or academic studies to substantiate these claims. Information about the model architecture, training data, and computational resources used is also missing. This information would ideally come from xAI directly or from peer-reviewed research.",
-      "**Government Use Cases and Security Assessments:** The announcement of \"Grok For Government\" lacks specific details about its applications within the US government. There is no information about the types of tasks it will be used for, the security protocols in place, or any independent assessments of its reliability and potential risks in government contexts. A government agency report or a statement from a relevant oversight body would provide more credibility."
+      "Okay, I've reviewed the provided information about Grok's recent image generation capabilities. Here are some key omissions and gaps in the evidence, focusing on areas where more credible, authoritative sources are needed:",
+      "**Technical Specifications and Performance Benchmarks:** There's a lack of detailed information from xAI or independent researchers regarding the architecture, training data, and performance metrics of the \"Aurora\" model. We need specifics on image resolution, generation speed, and comparisons against other leading image generation models (e.g., DALL-E 3, Midjourney) from peer-reviewed studies or reputable tech publications. This would provide a more objective assessment of Grok's capabilities beyond marketing claims.",
+      "**Safety and Ethical Considerations (Beyond NSFW):** While the evidence mentions the \"spicy mode\" (NSFW content), there's a gap in information regarding broader safety and ethical considerations. Specifically, we need information from xAI or independent audits about measures taken to prevent the generation of harmful content such as deepfakes, biased imagery, or content that violates copyright or intellectual property laws. Reports from AI safety organizations or academic research on these aspects would be valuable."
     ],
-    "created_at": "2025-08-14 00:50:28.640723",
+    "created_at": "2025-08-14 01:37:38.957751",
     "source_count": 0,
     "freshness_score": 1.0
   },
   "commentary": {
-    "text": "The recent advancements in Grok's image generation capabilities, particularly with the introduction of models like Aurora, warrant a structured analysis [S1, S2]. Aurora, an autoregressive mixture-of-experts network, is trained to predict the next token from interleaved text and image data, leveraging billions of internet examples [S1, S2]. This training regimen provides it with a \"deep understanding of the world,\" enabling photorealistic rendering [S1, S2]. Furthermore, Grok 2 integrated the Flux AI model for faster image generation [S3]. Grok also offers different models such as Flux.1 Pro, Flux.1 Dev, and Flux.1 Schnell [S5].\n\nHowever, it's important to note the varying levels of development across Grok's iterations. While Grok 3 enhances text-based interactions and introduces a cutting-edge image generation model [S2], Grok 4, launched on July 9, 2025, focuses primarily on text-based interactions and advanced reasoning, with image generation functionalities still under development [S2]. The \"spicy mode\" in Grok Imagine, generating sexualized content and partial nudity, also raises ethical considerations regarding potential misuse [S3, S4].\n\nIn conclusion, Grok's image generation is rapidly evolving, but its capabilities and ethical implications require careful evaluation.",
+    "text": "The recent release of Grok Imagine by xAI marks a notable development in the field of AI-driven image generation [S1, S6]. This tool allows users to create images and videos from text prompts [S4]. The underlying technology utilizes an autoregressive mixture-of-experts network, trained on billions of internet examples, to predict the next token from interleaved text and image data [S1, S2]. This architecture enables the system to understand and interpret complex visual concepts, offering precise control over image generation [S5].\n\nOne distinctive feature of Grok Imagine is its \"spicy mode,\" which allows for the generation of NSFW content [S2, S4]. While the image generation functionalities are still being developed [S3], xAI aims to position Grok as a boundary-pushing AI tool [S4]. It's important to note that the accuracy of the generated images may vary [S4], but improvements are expected over time [S4].\n\nIn conclusion, Grok Imagine represents a new AI image and video generator [S1, S6] that uses sophisticated neural networks [S5] and is expected to improve over time [S4].",
     "citations": [
       {
-        "id": "S3",
+        "id": "S4",
         "type": "web",
-        "url": "https://www.tomsguide.com/ai/grok-launches-ai-image-generator-with-a-nsfw-spicy-mode-its-exactly-what-youd-expect",
-        "title": "Grok launches AI image generator with a NSFW 'spicy mode'",
-        "excerpt": "Get instant access to breaking news, the hottest reviews, great deals and helpful tips.\n\nImagine with @Grok pic.twitter.com/UIay5yNp97August 4, 2025\n\nGrok has grown in scope and scale over the last ye...",
-        "confidence": 0.7507177,
-        "timestamp": "2025-08-14 00:49:43.446960",
+        "url": "https://www.pcmag.com/news/grok-app-adds-ai-image-and-video-generator-with-nsfw-spicy-mode",
+        "title": "Grok App Adds AI Image and Video Generator With NSFW ...",
+        "excerpt": "Grok Imagine lets you generate AI images and videos from text prompts. The results aren't always accurate, but Elon Musk says it will get better...",
+        "confidence": 0.97879,
+        "timestamp": "2025-08-14 01:37:12.046602",
         "trust_score": 0.7
       },
       {
         "id": "S5",
         "type": "web",
-        "url": "https://www.pcmag.com/news/grok-app-adds-ai-image-and-video-generator-with-nsfw-spicy-mode",
-        "title": "Grok App Adds AI Image and Video Generator With NSFW 'Spicy ...",
-        "excerpt": "After adding a pornographic AI Companion last month, Elon Musk's Grok app now has an AI image and video generator that lets you create \"Spicy\" content.\n\nThe Imagine feature is currently available on m...",
-        "confidence": 0.6944897,
-        "timestamp": "2025-08-14 00:49:43.450053",
+        "url": "https://www.youtube.com/watch?v=SjEGtR3457Y",
+        "title": "Grok Imagine Goes WILD: The Spicy Update That's Breaking All Rules!",
+        "excerpt": "Images and video both generate faster then any other model right now. ... \ud83d\uddde OUT NOW: Subscribe to my newsletter for new prompts, AI news and 10x...",
+        "confidence": 0.97691,
+        "timestamp": "2025-08-14 01:37:12.047147",
         "trust_score": 0.7
       },
       {
-        "id": "S2",
+        "id": "S3",
         "type": "web",
         "url": "https://datatunnel.io/revolutionizing-ai-image-generation-with-grok-4/",
         "title": "Revolutionizing AI Image Generation with Grok 4 - Datatunnel",
-        "excerpt": "Current Status: As of now, Grok 4 supports accommodating both text and vision modalities, and its image generation will soon be fully integrated. It can also analyze and edit images provided as input,...",
-        "confidence": 0.7795405,
-        "timestamp": "2025-08-14 00:49:57.706731",
+        "excerpt": "Key Features of Grok 4's Image Generation:  Current Status: As of now, Grok 4 supports accommodating both text and vision modalities, and its image generation will soon be fully integrated . It can al...",
+        "confidence": 0.9853,
+        "timestamp": "2025-08-14 01:36:54.205449",
         "trust_score": 0.6
       }
     ]
   },
   "verified_text": {
-    "text": "The recent advancements in Grok's image generation capabilities, particularly with the introduction of models like Aurora, warrant a structured analysis [S1, S2]. I'd need to examine more evidence before drawing conclusions on that. This training regimen provides it with a \"deep understanding of the world,\" enabling photorealistic rendering [S1, S2]. Furthermore, Grok 2 integrated the Flux AI model for faster image generation [S3]. Grok also offers different models such as Flux. 1 Pro, Flux. 1 Dev, and Flux. 1 Schnell [S5]. However, it's important to note the varying levels of development across Grok's iterations. While Grok 3 enhances text-based interactions and introduces a cutting-edge image generation model [S2], Grok 4, launched on July 9, 2025, focuses primarily on text-based interactions and advanced reasoning, with image generation functionalities still under development [S2]. The \"spicy mode\" in Grok Imagine, generating sexualized content and partial nudity, also raises ethical considerations regarding potential misuse [S3, S4]. I'd need to examine more evidence before drawing conclusions on that.",
-    "citations": [],
+    "text": "The recent release of Grok Imagine by xAI marks a notable development in the field of AI-driven image generation [S1, S6]. This tool allows users to create images and videos from text prompts [S4]. I'd need to examine more evidence before drawing conclusions on that. This architecture enables the system to understand and interpret complex visual concepts, offering precise control over image generation [S5]. I'd need to examine more evidence before drawing conclusions on that. While the image generation functionalities are still being developed [S3], xAI aims to position Grok as a boundary-pushing AI tool [S4]. It's important to note that the accuracy of the generated images may vary [S4], but improvements are expected over time [S4]. In conclusion, Grok Imagine represents a new AI image and video generator [S1, S6] that uses sophisticated neural networks [S5] and is expected to improve over time [S4].",
+    "citations": [
+      {
+        "id": "S4",
+        "type": "web",
+        "url": "https://www.pcmag.com/news/grok-app-adds-ai-image-and-video-generator-with-nsfw-spicy-mode",
+        "title": "Grok App Adds AI Image and Video Generator With NSFW ...",
+        "excerpt": "Grok Imagine lets you generate AI images and videos from text prompts. The results aren't always accurate, but Elon Musk says it will get better...",
+        "confidence": 0.97879,
+        "timestamp": "2025-08-14 01:37:12.046602",
+        "trust_score": 0.7
+      },
+      {
+        "id": "S5",
+        "type": "web",
+        "url": "https://www.youtube.com/watch?v=SjEGtR3457Y",
+        "title": "Grok Imagine Goes WILD: The Spicy Update That's Breaking All Rules!",
+        "excerpt": "Images and video both generate faster then any other model right now. ... \ud83d\uddde OUT NOW: Subscribe to my newsletter for new prompts, AI news and 10x...",
+        "confidence": 0.97691,
+        "timestamp": "2025-08-14 01:37:12.047147",
+        "trust_score": 0.7
+      },
+      {
+        "id": "S3",
+        "type": "web",
+        "url": "https://datatunnel.io/revolutionizing-ai-image-generation-with-grok-4/",
+        "title": "Revolutionizing AI Image Generation with Grok 4 - Datatunnel",
+        "excerpt": "Key Features of Grok 4's Image Generation:  Current Status: As of now, Grok 4 supports accommodating both text and vision modalities, and its image generation will soon be fully integrated . It can al...",
+        "confidence": 0.9853,
+        "timestamp": "2025-08-14 01:36:54.205449",
+        "trust_score": 0.6
+      }
+    ],
     "verification_notes": [
-      "Removed unsupported factual claim: 'Aurora, an autoregressive mixture-of-experts netwo...'",
-      "Removed unsupported factual claim: 'In conclusion, Grok's image generation is rapidly ...'"
+      "Removed unsupported factual claim: 'The underlying technology utilizes an autoregressi...'",
+      "Removed unsupported factual claim: 'One distinctive feature of Grok Imagine is its \"sp...'"
     ]
   },
   "styled_text": {
-    "styled_text": "The recent advancements in Grok's image generation, particularly with models like Aurora, warrant a structured analysis [S1, S2]. (thoughtful) I'd need to examine more evidence before drawing any firm conclusions on that, of course. This training regimen, they say, provides it with a \"deep understanding of the world,\" enabling photorealistic rendering [S1, S2]. Furthermore, Grok 2 integrated the Flux AI model for faster image generation [S3]. (pause) Grok also offers different models such as Flux. 1 Pro, Flux. 1 Dev, and Flux. 1 Schnell [S5]. However, it's important to note the varying levels of development across Grok's iterations. While Grok 3 enhances text-based interactions and introduces a cutting-edge image generation model [S2], Grok 4, launched on July 9, 2025, focuses primarily on text-based interactions and advanced reasoning, with image generation functionalities still under development [S2]. (serious tone) The \"spicy mode\" in Grok Imagine, generating sexualized content and partial nudity, also raises ethical considerations regarding potential misuse [S3, S4]. I'd need to examine more evidence before drawing conclusions on that."
+    "styled_text": "The recent release of Grok Imagine by xAI marks a notable development, certainly, in the field of AI-driven image generation [S1, S6]. (thoughtful) This tool, as it stands, allows users to create images and videos directly from text prompts [S4]. I'd need to examine more evidence before drawing conclusions on that. This architecture, notably, enables the system to understand and interpret complex visual concepts, offering users precise control over the image generation process [S5]. I'd need to examine more evidence before drawing conclusions on that. (pause) While the image generation functionalities are still being developed, of course [S3], xAI clearly aims to position Grok as a boundary-pushing AI tool [S4]. It's important to note, however, that the accuracy of the generated images may vary [S4], but improvements are, as always, expected over time [S4]. (serious tone) In conclusion, Grok Imagine represents a new entry into AI image and video generation [S1, S6], one that uses sophisticated neural networks [S5] and is expected to improve over time [S4]."
   },
-  "final_turn": "The recent advancements in Grok's image generation, particularly with models like Aurora, warrant a structured analysis [S1, S2]. (thoughtful) I'd need to examine more evidence before drawing any firm conclusions on that, of course. This training regimen, they say, provides it with a \"deep understanding of the world,\" enabling photorealistic rendering [S1, S2]. Furthermore, Grok 2 integrated the Flux AI model for faster image generation [S3]. (pause) Grok also offers different models such as Flux. 1 Pro, Flux. 1 Dev, and Flux. 1 Schnell [S5]. However, it's important to note the varying levels of development across Grok's iterations. While Grok 3 enhances text-based interactions and introduces a cutting-edge image generation model [S2], Grok 4, launched on July 9, 2025, focuses primarily on text-based interactions and advanced reasoning, with image generation functionalities still under development [S2]. (serious tone) The \"spicy mode\" in Grok Imagine, generating sexualized content and partial nudity, also raises ethical considerations regarding potential misuse [S3, S4]. I'd need to examine more evidence before drawing conclusions on that."
+  "final_turn": "The recent release of Grok Imagine by xAI marks a notable development, certainly, in the field of AI-driven image generation [S1, S6]. (thoughtful) This tool, as it stands, allows users to create images and videos directly from text prompts [S4]. I'd need to examine more evidence before drawing conclusions on that. This architecture, notably, enables the system to understand and interpret complex visual concepts, offering users precise control over the image generation process [S5]. I'd need to examine more evidence before drawing conclusions on that. (pause) While the image generation functionalities are still being developed, of course [S3], xAI clearly aims to position Grok as a boundary-pushing AI tool [S4]. It's important to note, however, that the accuracy of the generated images may vary [S4], but improvements are, as always, expected over time [S4]. (serious tone) In conclusion, Grok Imagine represents a new entry into AI image and video generation [S1, S6], one that uses sophisticated neural networks [S5] and is expected to improve over time [S4]."
 }
