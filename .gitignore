@@ -1,0 +1,17 @@
+# Build and output artifacts
+output/**
+!output/.gitkeep
+
+# Data artifacts (large/binary)
+data/indices/**
+data/audio/**
+data/turns/**
+data/voices/**
+
+# Python cache
+__pycache__/**
+*.pyc
+
+# Node
+frontend/node_modules/**
+

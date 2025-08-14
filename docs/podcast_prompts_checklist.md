@@ -55,6 +55,7 @@ Use this checklist to upgrade prompts, personas, and orchestration for more natu
   - [ ] Define terms → Example → Evidence-backed claim → Counterpoint → Synthesis → Audience takeaway
 - [ ] Add “topic pivots” for weak evidence scenes (uncertainty framing, analogy, implications)
 - [ ] Add turn-taking rules (handoffs, callbacks, direct questions)
+- [ ] Enforce non-mirroring intros/outros: distinct hook buckets per persona; regenerate on high similarity
 
 ### Corpus and Retrieval Alignment
 - [ ] Ensure retrieval respects each avatar’s `corpus/*/manifest.yaml` weights and grounding rules
