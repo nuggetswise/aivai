@@ -1,0 +1,15 @@
+{
+  "episode_id": "e2e-ep",
+  "topic": "Demo End-to-End",
+  "avatars": {"A1": "Alex Chen", "A2": "Nova Rivers"},
+  "started_at": "2025-08-13T20:20:00Z",
+  "completed_at": "2025-08-13T20:22:00Z",
+  "turns": [
+    {"avatar": "A1", "phase": "opening", "text": "(thoughtful) Opening point with evidence [S1].", "citations": [], "audio_path": null, "timestamp": "2025-08-13T20:20:10Z"},
+    {"avatar": "A2", "phase": "opening", "text": "(chuckle) Counterpoint with nuance [S2].", "citations": [], "audio_path": null, "timestamp": "2025-08-13T20:20:30Z"},
+    {"avatar": "A1", "phase": "crossfire", "text": "(confident) Rebuttal on reliability [S3].", "citations": [], "audio_path": null, "timestamp": "2025-08-13T20:21:00Z"},
+    {"avatar": "A2", "phase": "crossfire", "text": "(skeptical) Emphasizing UX basics [S2].", "citations": [], "audio_path": null, "timestamp": "2025-08-13T20:21:20Z"},
+    {"avatar": "A1", "phase": "closing", "text": "(steady) Summary and careful rollout [S3].", "citations": [], "audio_path": null, "timestamp": "2025-08-13T20:21:40Z"},
+    {"avatar": "A2", "phase": "closing", "text": "(engaging) Ship wow and works-as-advertised [S2].", "citations": [], "audio_path": null, "timestamp": "2025-08-13T20:21:55Z"}
+  ]
+}

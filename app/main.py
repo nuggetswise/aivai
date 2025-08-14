@@ -9,13 +9,18 @@ import json
 import uuid
 import os
 from pathlib import Path
+import sys
+import subprocess
+import shutil
 import yaml
 from datetime import datetime, timedelta
 import random
 
 from app.orchestrator.episode_runner import EpisodeRunner
 from app.models import EpisodeConfig, Avatar as AvatarModel
-from app.deps import get_config
+from app.tts.adapter import get_tts_adapter
+from app.models import Persona, TTSInput
+from app.deps import get_search_client, get_embeddings_client, get_llm_router
 
 app = FastAPI(title="AIvAI Debate Platform", version="1.0.0")
 
@@ -30,6 +35,40 @@ app.add_middleware(
 
 # Serve static files (audio, transcripts)
 app.mount("/static", StaticFiles(directory="data"), name="static")
+# Serve generated media assets (output directory)
+app.mount("/media", StaticFiles(directory="output"), name="media")
+
+# Convenience: serve any file under output via /files/output/{path}
+@app.get("/files/output/{path:path}")
+async def get_output_file(path: str):
+    file_path = Path("output") / path
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Output file not found")
+    # Best-effort content type based on suffix
+    suffix = file_path.suffix.lower()
+    media_type = "application/octet-stream"
+    if suffix == ".mp3":
+        media_type = "audio/mpeg"
+    elif suffix == ".wav":
+        media_type = "audio/wav"
+    elif suffix == ".mp4":
+        media_type = "video/mp4"
+    elif suffix == ".vtt":
+        media_type = "text/vtt"
+    elif suffix == ".srt":
+        media_type = "text/plain"
+    return FileResponse(file_path, media_type=media_type)
+
+
+@app.get("/health")
+async def health():
+    ffmpeg_ok = shutil.which("ffmpeg") is not None
+    env = {
+        "ELEVEN_API_KEY": bool(os.environ.get("ELEVEN_API_KEY")),
+        "GEMINI_API_KEY": bool(os.environ.get("GEMINI_API_KEY")),
+        "TAVILY_API_KEY": bool(os.environ.get("TAVILY_API_KEY")),
+    }
+    return {"ok": True, "ffmpeg": ffmpeg_ok, "env": env}
 
 # Models
 class Avatar(BaseModel):
@@ -44,6 +83,29 @@ class DebateRequest(BaseModel):
     avatar_b: str
     max_turns_per_phase: int = 2
     enable_verification: bool = True
+
+class ResearchRequestBody(BaseModel):
+    topic: str
+    perspective: Optional[str] = None
+    max_results: int = 6
+
+class KnowledgeProcessBody(BaseModel):
+    avatarId: str
+    topic: str
+    researchResults: List[Dict[str, Any]]
+
+class KnowledgeSearchBody(BaseModel):
+    avatarId: str
+    query: str
+    maxResults: int = 5
+
+class DebateTurnRequest(BaseModel):
+    topic: str
+    avatars: List[Dict[str, Any]]
+    avatarId: str
+    phase: Optional[str] = "main"
+    messages: List[Dict[str, Any]] = []
+    opponentLastMessage: Optional[Dict[str, Any]] = None
 
 class EpisodeResponse(BaseModel):
     episode_id: str
@@ -83,6 +145,27 @@ class EvidenceBundle(BaseModel):
     query_terms: List[str] = []
     generated_at: datetime
 
+class Source(BaseModel):
+    source_id: str
+    url: str
+    title: str
+    author: Optional[str] = None
+    published_date: Optional[datetime] = None
+    domain: Optional[str] = None
+    trust_score: Optional[float] = None
+    content_snippet: Optional[str] = None
+
+class Claim(BaseModel):
+    claim_id: str
+    text: str
+    confidence: float
+    citations: List[str] = []
+
+class RichTextSegment(BaseModel):
+    text: str
+    emotion: str = "neutral"
+    emphasis: float = 1.0
+
 class Turn(BaseModel):
     turn_id: str
     avatar_id: str
@@ -111,6 +194,11 @@ episodes: Dict[str, Episode] = {}
 episode_statuses: Dict[str, EpisodeStatus] = {}
 evidence_bundles: Dict[str, EvidenceBundle] = {}
 active_websockets: Dict[str, List[WebSocket]] = {}
+
+# In-memory stores
+knowledge_store: Dict[str, Dict[str, Any]] = {}
+idempotency_cache: Dict[str, Any] = {}
+task_store: Dict[str, Dict[str, Any]] = {}
 
 @app.get("/")
 async def root():
@@ -192,6 +280,304 @@ async def create_episode(request: DebateRequest):
         message="Episode created successfully"
     )
 
+
+@app.post("/research")
+async def research_endpoint(body: ResearchRequestBody):
+    try:
+        sc = get_search_client()
+        results = sc.search(body.topic, max_results=body.max_results, include_raw_content=True, include_answer=True)
+        if body.perspective:
+            key = "benefit" if body.perspective == "pro" else "risk"
+            results = [r for r in results if key in (r.get("content") or r.get("raw_content") or "").lower()] or results
+        def extract_points(text: str) -> List[str]:
+            text = (text or "")[:800]
+            sentences = [s.strip() for s in text.split('.') if len(s.strip()) > 20]
+            return sentences[:5]
+        keyPoints: List[str] = []
+        for r in results[:3]:
+            keyPoints += extract_points(r.get("content") or r.get("raw_content") or "")
+        payload = {
+            "success": True,
+            "data": {
+                "keyPoints": keyPoints[:5],
+                "sources": [
+                    {
+                        "title": r.get("title", ""),
+                        "content": r.get("content", r.get("raw_content", "")),
+                        "url": r.get("url", ""),
+                        "score": r.get("score", 0.7),
+                    } for r in results
+                ],
+                "perspective": body.perspective or "neutral",
+            }
+        }
+        return payload
+    except Exception as e:
+        return {"success": False, "error": {"code": "RESEARCH_ERROR", "message": str(e), "details": {}}}
+
+
+@app.post("/knowledge/process")
+async def knowledge_process_endpoint(body: KnowledgeProcessBody):
+    try:
+        embedder = get_embeddings_client()
+        chunks: List[Dict[str, Any]] = []
+        def chunk_text(text: str, source: str, url: Optional[str]) -> List[Dict[str, Any]]:
+            text = (text or "").strip()
+            if not text:
+                return []
+            size = 500
+            overlap = 50
+            out: List[Dict[str, Any]] = []
+            i = 0
+            idx = 0
+            while i < len(text) and idx < 20:
+                j = min(len(text), i + size)
+                k = text.rfind('.', i, j)
+                if k > i + int(size * 0.6):
+                    j = k + 1
+                out.append({
+                    "id": f"{source}-chunk-{idx}",
+                    "content": text[i:j].strip(),
+                    "metadata": {"source": source, "url": url, "timestamp": int(datetime.now().timestamp()*1000), "chunkIndex": idx}
+                })
+                i = max(j - overlap, i + 1)
+                idx += 1
+            return out
+        for r in body.researchResults:
+            src = r.get("title", "source")
+            url = r.get("url")
+            text = r.get("content") or r.get("raw_content") or ""
+            chunks += chunk_text(text, src, url)
+        embeddings = embedder.embed([c["content"] for c in chunks]) if chunks else []
+        for c, emb in zip(chunks, embeddings):
+            c["embedding"] = emb
+        corpus = {
+            "avatarId": body.avatarId,
+            "topic": body.topic,
+            "chunks": chunks,
+            "summary": f"Knowledge corpus for {body.topic} with {len(chunks)} chunks.",
+            "keyPoints": [c["content"][:80] for c in chunks[:5]],
+            "createdAt": int(datetime.now().timestamp()*1000),
+            "updatedAt": int(datetime.now().timestamp()*1000),
+        }
+        knowledge_store[body.avatarId] = corpus
+        return {"success": True, "data": {"corpusId": body.avatarId, "chunksCount": len(chunks), "summary": corpus["summary"], "keyPoints": corpus["keyPoints"], "processedAt": corpus["createdAt"]}}
+    except Exception as e:
+        return {"success": False, "error": {"code": "KNOWLEDGE_PROCESS_ERROR", "message": str(e), "details": {}}}
+
+
+@app.post("/knowledge/search")
+async def knowledge_search_endpoint(body: KnowledgeSearchBody):
+    try:
+        corpus = knowledge_store.get(body.avatarId)
+        if not corpus:
+            return {"success": False, "error": {"code": "NOT_FOUND", "message": "Knowledge corpus not found", "details": {}}}
+        embedder = get_embeddings_client()
+        query_emb = embedder.embed([body.query])[0]
+        def cos(a: List[float], b: List[float]) -> float:
+            import math
+            dot = sum(x*y for x, y in zip(a, b))
+            na = math.sqrt(sum(x*x for x in a))
+            nb = math.sqrt(sum(y*y for y in b))
+            return (dot / (na*nb)) if na and nb else 0.0
+        ranked: List[Dict[str, Any]] = []
+        for c in corpus["chunks"]:
+            sim = cos(query_emb, c.get("embedding", [])) if c.get("embedding") else 0.0
+            ranked.append({
+                "id": c["id"],
+                "content": c["content"],
+                "source": c["metadata"]["source"],
+                "url": c["metadata"].get("url"),
+                "similarity": sim,
+            })
+        ranked.sort(key=lambda x: x["similarity"], reverse=True)
+        ranked = ranked[: body.maxResults]
+        return {"success": True, "data": {"query": body.query, "results": ranked, "totalResults": len(ranked)}}
+    except Exception as e:
+        return {"success": False, "error": {"code": "KNOWLEDGE_SEARCH_ERROR", "message": str(e), "details": {}}}
+
+
+@app.post("/debate/generate")
+async def debate_generate_endpoint(body: DebateTurnRequest):
+    try:
+        avatar = next((a for a in body.avatars if a.get("id") == body.avatarId), None)
+        if not avatar:
+            raise HTTPException(status_code=404, detail="Avatar not found")
+        stance = avatar.get("stance", "pro")
+        knowledge = avatar.get("knowledge", [])
+        stance_desc = "supporting" if stance == "pro" else "opposing"
+        knowledge_context = ". ".join(knowledge[:5])
+        system = f"You are {avatar.get('name','Debater')}, an AI avatar {stance_desc} the topic \"{body.topic}\". Keep responses concise (2-3 sentences)."
+        context = f"Topic: {body.topic}\nYour stance: {stance.upper()}\nYour knowledge base includes: {knowledge_context}"
+        if body.phase == "opening":
+            user = f"Give your opening statement on \"{body.topic}\". Introduce your position and key arguments."
+        elif body.phase == "closing":
+            opp = " ".join(m.get("content","") for m in body.messages if m.get("avatarId") != body.avatarId)[-200:]
+            user = f"Give your closing statement. Summarize your position and address the main points raised by your opponent. Opponent's main arguments: {opp}"
+        else:
+            if body.opponentLastMessage and body.opponentLastMessage.get("content"):
+                user = f"Respond to your opponent's argument: \"{body.opponentLastMessage['content']}\". Present your counterargument using your knowledge."
+            else:
+                user = f"Present your main argument about \"{body.topic}\" using evidence from your knowledge base."
+        llm = get_llm_router().get_basic_llm()
+        content = llm.generate([
+            {"role": "system", "content": system},
+            {"role": "user", "content": f"{context}\n\n{user}"},
+        ], temperature=0.7, max_tokens=200)
+        return {"success": True, "data": {"content": content, "avatarId": body.avatarId, "timestamp": int(datetime.now().timestamp()*1000)}}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        return {"success": False, "error": {"code": "DEBATE_ERROR", "message": str(e), "details": {}}}
+
+
+class RenderRequest(BaseModel):
+    captions: Optional[bool] = True
+    videos: Optional[List[str]] = ["vertical", "square", "horizontal"]
+    font: Optional[str] = "Arial"
+    bg: Optional[str] = "black"
+    waveform_ratio: Optional[float] = 0.35
+
+
+@app.post("/episodes/{episode_id}/render")
+async def render_episode_assets(episode_id: str, request: RenderRequest):
+    """Render audio, captions (SRT/VTT), and videos for a completed episode using md_podcast_build.py"""
+    repo_root = Path(__file__).resolve().parents[1]
+    transcripts_dir = repo_root / "data" / "transcripts"
+    md_path = transcripts_dir / f"{episode_id}_transcript.md"
+    builder = repo_root / "md_podcast_build.py"
+
+    if not md_path.exists():
+        raise HTTPException(status_code=404, detail=f"Transcript Markdown not found for episode {episode_id}")
+    if not builder.exists():
+        raise HTTPException(status_code=500, detail="Media builder script not found")
+
+    # Invoke builder synchronously for now
+    try:
+        args = [
+            sys.executable, str(builder),
+            "--md", str(md_path),
+            "--slug", episode_id,
+        ]
+        voices_yaml = repo_root / "config" / "tts_voices.yaml"
+        if voices_yaml.exists():
+            args += ["--voices", str(voices_yaml)]
+        subprocess.run(args, check=True)
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Render failed: {e}")
+
+    # Return discovered assets
+    return await get_episode_assets(episode_id)
+
+
+class ClipsRequest(BaseModel):
+    n: int = 3
+    minSec: float = 15.0
+    maxSec: float = 40.0
+    filterSpeaker: str = ""
+    font: str = "Arial"
+    bg: str = "black"
+    wf_ratio: float = 0.35
+
+
+@app.post("/episodes/{episode_id}/clips")
+async def generate_clips(episode_id: str, request: ClipsRequest):
+    """Generate short clips for the episode using clip_maker.py"""
+    repo_root = Path(__file__).resolve().parents[1]
+    output_dir = repo_root / "output"
+    audio = output_dir / f"{episode_id}.mp3"
+    srt = output_dir / f"{episode_id}.srt"
+    if not audio.exists() or not srt.exists():
+        raise HTTPException(status_code=404, detail="Episode audio/SRT not found. Render assets first.")
+
+    clip_maker = repo_root / "clip_maker.py"
+    if not clip_maker.exists():
+        raise HTTPException(status_code=500, detail="clip_maker.py not found")
+
+    outdir = output_dir / "clips" / episode_id
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        subprocess.run([
+            sys.executable, str(clip_maker),
+            "--audio", str(audio),
+            "--srt", str(srt),
+            "--outdir", str(outdir),
+            "--n", str(request.n),
+            "--min_s", str(request.minSec),
+            "--max_s", str(request.maxSec),
+            "--filter_speaker", request.filterSpeaker,
+            "--font", request.font,
+            "--bg", request.bg,
+            "--wf_ratio", str(request.wf_ratio),
+        ], check=True)
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Clip generation failed: {e}")
+
+    clips = [str(p.resolve()) for p in outdir.glob("*.mp4")]
+    return {"episode_id": episode_id, "clips": sorted(clips)}
+
+
+@app.get("/episodes/{episode_id}/clips")
+async def list_clips(episode_id: str):
+    repo_root = Path(__file__).resolve().parents[1]
+    outdir = repo_root / "output" / "clips" / episode_id
+    if not outdir.exists():
+        return {"episode_id": episode_id, "clips": []}
+    clips = [str(p.resolve()) for p in outdir.glob("*.mp4")]
+    return {"episode_id": episode_id, "clips": sorted(clips)}
+
+
+@app.get("/config/tts-voices")
+async def get_tts_voices():
+    """Return the TTS voice mapping config if present"""
+    repo_root = Path(__file__).resolve().parents[1]
+    cfg = repo_root / "config" / "tts_voices.yaml"
+    if not cfg.exists():
+        return {"voices": {}}
+    with open(cfg, "r") as f:
+        data = yaml.safe_load(f) or {}
+    return data
+
+
+@app.put("/config/tts-voices")
+async def put_tts_voices(payload: Dict[str, Any]):
+    """Update the TTS voice mapping config"""
+    repo_root = Path(__file__).resolve().parents[1]
+    cfg = repo_root / "config" / "tts_voices.yaml"
+    cfg.parent.mkdir(parents=True, exist_ok=True)
+    # Very light validation
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Invalid payload")
+    with open(cfg, "w") as f:
+        yaml.safe_dump(payload, f, sort_keys=False)
+    return {"ok": True}
+
+
+class TTSSynthesizeRequest(BaseModel):
+    text: str
+    persona: Dict[str, Any]
+
+
+@app.post("/tts/synthesize")
+async def tts_synthesize(req: TTSSynthesizeRequest):
+    """Server-side TTS synthesis using mock when ElevenLabs is not configured."""
+    try:
+        persona = Persona(**req.persona)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid persona: {e}")
+
+    adapter = get_tts_adapter()
+    if not os.environ.get("ELEVEN_API_KEY"):
+        adapter.default_engine = "mock"
+    output = adapter.synthesize(TTSInput(styled_text=req.text, persona=persona))
+    # Fallback to mock if primary engine failed
+    if (not output.audio_path) and hasattr(adapter, "engines") and "mock" in adapter.engines:
+        output = adapter.engines["mock"].synthesize(TTSInput(styled_text=req.text, persona=persona))
+    if not output.audio_path:
+        raise HTTPException(status_code=500, detail="TTS synthesis failed")
+    return {"audio_path": output.audio_path, "duration": output.duration_seconds}
+
 @app.post("/episodes/{episode_id}/start")
 async def start_episode(episode_id: str, background_tasks: BackgroundTasks):
     """Start a debate episode"""
@@ -229,6 +615,41 @@ async def get_episode(episode_id: str):
         raise HTTPException(status_code=404, detail="Episode not found")
     
     return episodes[episode_id]
+
+
+@app.get("/episodes/{episode_id}/assets")
+async def get_episode_assets(episode_id: str):
+    """Return produced asset paths for the episode if available"""
+    repo_root = Path(__file__).resolve().parents[1]
+    output_dir = repo_root / "output"
+    slug = episode_id
+
+    assets = {
+        "mp3": str((output_dir / f"{slug}.mp3").resolve()),
+        "srt": str((output_dir / f"{slug}.srt").resolve()),
+        "vtt": str((output_dir / f"{slug}.vtt").resolve()),
+        "videos": [
+            str((output_dir / f"{slug}_vertical.mp4").resolve()),
+            str((output_dir / f"{slug}_square.mp4").resolve()),
+            str((output_dir / f"{slug}_horizontal.mp4").resolve()),
+        ],
+        "clips": [str(p.resolve()) for p in (output_dir / "clips" / slug).glob("*.mp4")] if (output_dir / "clips" / slug).exists() else []
+    }
+
+    # Filter to existing files only
+    def exists(p: str) -> bool:
+        try:
+            return Path(p).exists()
+        except Exception:
+            return False
+
+    assets["videos"] = [p for p in assets["videos"] if exists(p)]
+    assets["clips"] = [p for p in assets["clips"] if exists(p)]
+    for k in ["mp3", "srt", "vtt"]:
+        if not exists(assets[k]):
+            assets[k] = None
+
+    return {"episode_id": episode_id, "assets": assets}
 
 # WebSocket connection handler
 @app.websocket("/ws/{episode_id}")
@@ -309,7 +730,6 @@ async def notify_turn_generated(episode_id: str, turn: Turn):
             "avatar_name": turn.avatar_name,
             "phase": turn.phase,
             "text": turn.text,
-            "rich_text": turn.rich_text.to_json() if turn.rich_text else None,
             "audio_path": turn.audio_path,
             "citations": [citation.dict() for citation in turn.citations],
             "timestamp": turn.timestamp.isoformat(),
@@ -587,7 +1007,7 @@ async def pause_episode(episode_id: str):
     episode.status = "paused"
     
     # Broadcast status update
-    await broadcast_status_update(episode_id)
+    await broadcast_to_websockets(episode_id, {"type": "status_update", "episode_status": episode_statuses[episode_id].dict()})
     
     return {"message": f"Episode {episode_id} paused", "status": "paused"}
 
@@ -606,7 +1026,7 @@ async def resume_episode(episode_id: str):
     episode.previous_status = None
     
     # Broadcast status update
-    await broadcast_status_update(episode_id)
+    await broadcast_to_websockets(episode_id, {"type": "status_update", "episode_status": episode_statuses[episode_id].dict()})
     
     return {"message": f"Episode {episode_id} resumed", "status": episode.status}
 
@@ -629,7 +1049,7 @@ async def trigger_next_turn(
     
     # Update status
     episode.status = "generating_turn"
-    await broadcast_status_update(episode_id)
+    await broadcast_to_websockets(episode_id, {"type": "status_update", "episode_status": episode_statuses[episode_id].dict()})
     
     # In a real implementation, this would trigger the orchestrator to generate the next turn
     # For demo purposes, we'll create a placeholder turn and broadcast after a delay
@@ -639,13 +1059,12 @@ async def trigger_next_turn(
     )
     
     # Create a background task to simulate turn generation
-    background_tasks.add_task(
-        generate_turn_background,
+    asyncio.create_task(generate_turn_background(
         episode_id=episode_id,
         turn_id=turn_id,
         avatar_id=avatar_id,
         override_prompt=override_prompt
-    )
+    ))
     
     return {"message": "Generating next turn", "turn_id": turn_id}
 
@@ -663,10 +1082,7 @@ async def generate_turn_background(
     episode = episodes[episode_id]
     
     # Get the avatar details
-    avatar = next((a for a in avatars if a.avatar_id == avatar_id), None)
-    if not avatar:
-        logger.error(f"Avatar {avatar_id} not found")
-        return
+    avatar = {"avatar_id": avatar_id, "name": avatar_id.upper()}
     
     # Generate a simulated turn
     current_phase = "opening" if len(episode.turns) < 2 else (
@@ -740,5 +1156,6 @@ async def generate_turn_background(
         episode.status = "waiting_for_input" if episode.manual_mode else "in_progress"
     
     # Broadcast the new turn and status update
-    await broadcast_turn_update(episode_id, new_turn)
-    await broadcast_status_update(episode_id)
+    # In this demo scaffolding, simply broadcast over websockets if connected
+    await broadcast_to_websockets(episode_id, {"type": "turn_generated", "turn": new_turn.dict()})
+    await broadcast_to_websockets(episode_id, {"type": "status_update", "episode_status": episode_statuses[episode_id].dict()})

@@ -1,0 +1,60 @@
+## Plan 4 API — Task Checklist
+
+- [ ] Scope: unify research/knowledge/debate/tts with A/V rendering, captions, video exports, and clips; expose config; avoid hardcoding voice maps
+
+### Health and config
+- [x] GET `/health` returns ffmpeg presence and env flags
+- [x] GET `/config/tts-voices` reads `config/tts_voices.yaml`
+- [x] PUT `/config/tts-voices` updates `config/tts_voices.yaml`
+
+### Episodes (core)
+- [x] POST `/episodes` creates an episode
+- [x] POST `/episodes/{id}/start` starts background run
+- [x] GET `/episodes/{id}/status` polls progress
+- [x] GET `/episodes/{id}` returns episode
+- [x] WS `/ws/{id}` streams `status_update|phase_change|turn_generated|episode_complete|tts_progress`
+- [x] Model: extend `Episode` with `assets { mp3,srt,vtt,videos[],clips[] }`
+- [x] Runner: persist built assets on `Episode.assets`
+
+### Research/knowledge (optional; Next.js may proxy)
+- [ ] POST `/research` (backend parity)
+- [ ] POST `/knowledge/process` (backend parity)
+- [ ] POST `/knowledge/search` (backend parity)
+
+### Debate generation (per-turn)
+- [ ] POST `/debate/generate` (backend parity)
+
+### TTS (server-side only)
+- [ ] POST `/tts/synthesize` generates file and returns URL (server-safe)
+
+### Rendering and assets
+- [x] POST `/episodes/{id}/render` invokes `md_podcast_build.py`
+- [x] GET `/episodes/{id}/assets` returns discovered asset paths
+
+### Auto-clip maker
+- [x] POST `/episodes/{id}/clips` runs `clip_maker.py` with flags
+- [x] GET `/episodes/{id}/clips` lists generated clips
+
+### Files/serving
+- [x] Mount `/media` → `output/`
+- [x] GET `/files/output/{path}` serves any `output/` file with correct content-type
+- [x] Keep `/static` → `data/` (legacy)
+
+### Error model
+- [ ] Consistent 4xx/5xx error schema `{ success:false, error:{ code, message, details } }`
+
+### Security
+- [ ] CORS hardening and optional API key for write endpoints
+- [ ] Idempotency-Key support for POST `/episodes`, `/render`, `/clips`
+
+### Progress and background jobs
+- [ ] 202 + `task_id` pattern for long-running renders and clip jobs
+- [ ] GET `/tasks/{task_id}` or WS status for background workers
+
+### Frontend wiring
+- [ ] Next.js proxy routes to backend
+- [ ] Replace server route `provider:"browser"` path with backend `/tts/synthesize`
+
+### Notes
+- [x] Avoid hardcoding voice maps; load from `config/tts_voices.yaml`
+- [ ] Ensure dynamic intro/outro generation alignment

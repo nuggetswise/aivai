@@ -1,0 +1,49 @@
+# Debate: Grok’s Image Generation Blunder (Aurora)
+
+**Host (Narrator)**  
+Welcome to Charcha. Today: Grok’s image generator “Aurora”—why did it stumble, and what should we learn from it? Alex Chen and Nova Rivers are here to break it down.
+
+---
+
+## Alex Chen — Opening
+(thoughtful) The accidental Aurora release is a live case study in how we ship generative tech. Yes, text-to-image is a genuine “creative superpower” [S1], but early user tests showed misses on basic constraints—spatial relations and group sizes, for example [S2]. One tester even said Grok “cannot accurately generate the simplest of requests” [S6]. Add a “spicy mode,” and you raise real questions about misuse and guardrails [S3]. Elon Musk framed Aurora as a “beta version” [S4]—iterative releases are normal—but that makes rigorous pre-release testing even more important. Different models excel at different tasks [S5]; the lesson is to couple ambition with responsible rollout.
+
+## Nova Rivers — Opening
+(chuckle) The vibe whiplash is real: one minute it’s “AI is a creative superpower” [S1], the next it’s the infamous cube fail [S5]. Users ran into weird artifacts—odd table shapes, people sprouting from furniture—and ignored instructions like “zoom out” or “smaller group” [S2]. And sure, there’s a “spicy mode” [S3]—edgy, but risky. Elon calling it “beta” [S4] is fair, but people are testing it **today**. If you ship to the public, even by mistake, you’re asking for real-world judgments.
+
+---
+
+## Crossfire
+
+**Alex Chen**  
+(thoughtful) Saying “the evidence doesn’t support a definitive position” may be premature. “Beta” implies the team expects rapid improvement [S4], and some failures could be prompt-engineering nuances, not just model limits [S5]. But “beta” doesn’t waive responsibility—if users can access it, it needs basic reliability and clear guardrails [S3].
+
+**Nova Rivers**  
+(skeptical) Totally—iterate fast, but own the basics. If the model ignores concrete instructions—“zoom out,” “fewer people”—that’s a UX and reliability problem right now [S2]. Pushing boundaries with fewer guardrails [S1] plus a “spicy mode” [S3] is bold, but get the fundamentals working first. Otherwise the public takeaway becomes: cool promise, shaky product.
+
+---
+
+## Alex Chen — Closing
+(steady) Aurora’s stumble isn’t unique; it’s a reminder. Ship small, test hard, set expectations clearly, and stage capabilities—especially for sensitive features [S3][S4]. The upside remains real, but credibility comes from reliability.
+
+## Nova Rivers — Closing
+(engaging) Push the frontier, yes—just don’t skip the basics. Nail instruction-following, then flaunt the spice. If you want the crowd onboard, ship wow **and** works-as-advertised [S2][S3].
+
+---
+
+## Sources
+- **[S1]** Title, Publisher — URL
+- **[S2]** Title, Post/user (if social) — URL
+- **[S3]** Title, Publisher — URL
+- **[S4]** Title/quote referencing “beta version”, Source — URL
+- **[S5]** Title comparing cube/benchmarks, Source — URL
+- **[S6]** User report/critique — URL
+
+---
+
+## Episode Notes (for show page)
+- **Topic:** Grok “Aurora” image generation incident, capabilities vs. constraints, guardrails, and rollout.  
+- **Takeaways:**  
+  1) Beta ≠ public-ready—stage features, especially sensitive ones.  
+  2) Instruction-following is table stakes for trust.  
+  3) Edgy modes demand stronger governance and UX affordances.

@@ -110,6 +110,7 @@ class Turn(BaseModel):
     intent: TurnIntent
     text: str = Field(..., description="Final styled text of the turn")
     citations: List[Citation] = Field(default_factory=list)
+    beats: List["Beat"] = Field(default_factory=list)
     evidence_bundle_id: Optional[str] = None
     opponent_summary: Optional[str] = None
     audio_path: Optional[str] = None
@@ -166,7 +167,7 @@ class EpisodeConfig(BaseModel):
     freshness_days: int = Field(default=120)
     whitelist_domains: List[str] = Field(default_factory=list)
     blacklist_domains: List[str] = Field(default_factory=list)
-    phases: List[Phase] = Field(default_factory=list)
+    phases: List[EpisodePhase] = Field(default_factory=list)
     max_duration_seconds: int = Field(default=600)  # 10 minutes
 
 class Episode(BaseModel):
@@ -184,6 +185,9 @@ class Episode(BaseModel):
     notes_path: Optional[str] = None
     bundles: Dict[str, Bundle] = Field(default_factory=dict)
     
+    # Generated media assets (audio, captions, videos, clips)
+    assets: Optional["EpisodeAssets"] = None
+    
     @property
     def duration_minutes(self) -> Optional[float]:
         """Calculate episode duration in minutes"""
@@ -200,6 +204,15 @@ class Episode(BaseModel):
     def get_turns_by_avatar(self, avatar_key: str) -> List[Turn]:
         """Get all turns by specific avatar"""
         return [turn for turn in self.turns if turn.avatar_key == avatar_key]
+
+
+class EpisodeAssets(BaseModel):
+    """Produced media asset paths for an episode"""
+    mp3: Optional[str] = None
+    srt: Optional[str] = None
+    vtt: Optional[str] = None
+    videos: List[str] = Field(default_factory=list)
+    clips: List[str] = Field(default_factory=list)
 
 # Agent Input/Output Schemas (matching pipeline YAML)
 
@@ -231,6 +244,21 @@ class CommentatorOutput(BaseModel):
     text: str
     citations: List[Citation]
 
+class BeatProsody(BaseModel):
+    """Prosodic guidance for a beat"""
+    pace: Optional[str] = None  # slow|medium|fast
+    pitch: Optional[str] = None  # low|neutral|high
+    pauses: Optional[str] = None  # few|moderate|many
+
+class Beat(BaseModel):
+    """Structured speaking unit used for TTS pacing and naturalness"""
+    label: str
+    target_duration_s: Optional[float] = None
+    text: str  # spoken text (clean; no [S#]/[L#]/[R#])
+    emotion: Optional[str] = None
+    prosody: Optional[BeatProsody] = None
+    references: List[str] = Field(default_factory=list)
+
 class VerifierInput(BaseModel):
     """Input schema for Verifier agent"""
     draft: str
@@ -261,6 +289,7 @@ class TTSOutput(BaseModel):
     """Output schema for TTS agent"""
     audio_path: str
     duration_seconds: Optional[float] = None
+    references: List[str] = Field(default_factory=list)
 
 # API Schemas
 

@@ -10,7 +10,7 @@ default_unknown: "The current evidence doesn't support a definitive position on 
 voice:
   vendor: "dia"
   ref_audio: "data/voices/nova_reference.wav"
-  speaker_tag: "S1"  # Dia uses S1/S2 tags
+  speaker_tag: "[S2]"  # Dia uses S1/S2 tags
   pitch: 1.1
   speed: 1.05
   emotion: "enthusiastic"
@@ -24,3 +24,14 @@ bias_indicators:
   - "values personal experiences and anecdotes"
   - "prioritizes what's happening right now over historical context"
   - "sensitive to shifts in public opinion and viral trends"
+
+style_toolkit:
+  contractions: true
+  sentence_length: "varied"
+  rhetorical_devices:
+    - "punchy contrast"
+    - "example then takeaway"
+    - "call to action"
+  banter_moves:
+    - "ask for real-world example from the other speaker"
+    - "flip a trending narrative with a counterpoint"

@@ -1,0 +1,30 @@
+You are editing a debate script in Markdown for a podcast episode. Do the following transformations, preserving meaning and inline citation tags like [S1], [S2], etc.
+
+1) Add a succinct host intro and outro as H2 sections:
+   ## Host - Intro - Alex
+   ## Host - Outro - Nova
+   The intro should set the topic in 2–3 sentences. The outro should give 2–3 sentence takeaways.
+
+2) Normalize speakers and section headers to this pattern:
+   ## Alex Chen - Opening
+   ## Nova Rivers - Opening
+   ## Alex Chen - Crossfire
+   ## Nova Rivers - Crossfire
+   ## Alex Chen - Closing
+   ## Nova Rivers - Closing
+
+3) Remove pipeline artifacts and meta text, including lines mentioning:
+   - "Pipeline failed", "refined commentary", "preservation rules", internal system notes.
+
+4) Tighten each paragraph to 2–3 sentences. Keep only brief stage cues in parentheses like (pause), (chuckle), (thoughtful). Remove repetitive filler lines (e.g., repeated “The current evidence doesn’t support a definitive position on this.”)
+
+5) Preserve all bracketed citations [S1]...[S6] in-place. At the end, add:
+   ## Sources
+   and leave a stubbed list:
+   - [S1] Title — URL
+   - [S2] Title — URL
+   ... (do not fabricate; just keep placeholders if not provided)
+
+6) Ensure the final Markdown is clean, readable, and ready for TTS.
+
+Return only the complete, cleaned Markdown.

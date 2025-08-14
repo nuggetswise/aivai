@@ -51,3 +51,8 @@ When validating citations, consider:
 - The overall argument structure when possible
 
 Remember: Better to have fewer claims that are well-supported than many claims that are questionable. Always preserve the natural emotional flow of the commentary.
+
+## Speech vs References Policy
+- Spoken text should be clean and natural; do not require inline [S#]/[L#]/[R#]
+- Validate that any factual claims are supported in the `references` metadata
+- If support is missing, either soften to the persona’s `default_unknown` or reframe as a non-factual observation

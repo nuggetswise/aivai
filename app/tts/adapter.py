@@ -2,206 +2,99 @@ from typing import Optional, Dict, Any
 import os
 import logging
 from pathlib import Path
-import torch
-from transformers import AutoProcessor, DiaForConditionalGeneration
+import requests
 
 from app.config import settings
 from app.models import Persona, TTSInput, TTSOutput
 
 logger = logging.getLogger(__name__)
 
-class DiaTTSEngine:
-    """
-    Dia TTS engine integration using the nari-labs/Dia model.
-    Supports voice cloning with reference audio and speaker tags.
-    """
-    
+class ElevenLabsTTSEngine:
+    """ElevenLabs TTS engine using REST API."""
+
     def __init__(self):
-        self.model_checkpoint = "nari-labs/Dia-1.6B-0626"
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.output_dir = Path(settings.DATA_DIR) / "audio" / "turns"
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Load model and processor
-        self.processor = None
-        self.model = None
-        self._load_model()
-    
-    def _load_model(self):
-        """Load Dia model and processor"""
-        try:
-            logger.info("Loading Dia TTS model...")
-            self.processor = AutoProcessor.from_pretrained(self.model_checkpoint)
-            self.model = DiaForConditionalGeneration.from_pretrained(self.model_checkpoint).to(self.device)
-            logger.info(f"Dia TTS model loaded on {self.device}")
-        except Exception as e:
-            logger.error(f"Failed to load Dia TTS model: {e}")
-            raise
-    
+        self.api_key = os.environ.get("ELEVEN_API_KEY", "")
+        if not self.api_key:
+            raise RuntimeError("ELEVEN_API_KEY is not set")
+        # Optional default voice id
+        self.default_voice_id = os.environ.get("ELEVEN_VOICE_ID", "")
+
     def synthesize(self, tts_input: TTSInput) -> TTSOutput:
-        """
-        Synthesize speech from text using Dia TTS.
-        
-        Args:
-            tts_input: TTSInput with styled_text and persona
-            
-        Returns:
-            TTSOutput with audio_path and duration
-        """
-        logger.info(f"Synthesizing speech for {tts_input.persona.name}")
-        
         try:
-            # Step 1: Prepare text for Dia format
-            dia_text = self._prepare_text_for_dia(tts_input.styled_text, tts_input.persona)
-            
-            # Step 2: Generate unique filename
-            audio_filename = self._generate_audio_filename(tts_input.persona)
-            audio_path = self.output_dir / audio_filename
-            
-            # Step 3: Generate audio with Dia
-            success = self._generate_with_dia(dia_text, str(audio_path), tts_input.persona)
-            
-            if not success:
-                raise Exception("Dia TTS synthesis failed")
-            
-            # Step 4: Get audio duration (estimate)
-            duration = self._estimate_duration(dia_text)
-            
-            logger.info(f"TTS synthesis complete: {audio_path} ({duration:.2f}s)")
-            
-            return TTSOutput(
-                audio_path=str(audio_path),
-                duration_seconds=duration
-            )
-            
+            voice_id = self._resolve_voice_id(tts_input.persona)
+            if not voice_id:
+                raise RuntimeError("No ElevenLabs voice id configured for persona and ELEVEN_VOICE_ID not set")
+
+            filename = self._generate_audio_filename(tts_input.persona)
+            out_path = self.output_dir / filename
+
+            url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+            headers = {
+                "xi-api-key": self.api_key,
+                "accept": "audio/mpeg",
+                "content-type": "application/json",
+            }
+            clean_text, references = self._split_text_and_references(tts_input.styled_text)
+            payload = {
+                "text": clean_text,
+                "model_id": "eleven_monolingual_v1",
+                "voice_settings": {
+                    "stability": 0.5,
+                    "similarity_boost": 0.5,
+                    "style": 0.5,
+                    "use_speaker_boost": True,
+                },
+            }
+
+            resp = requests.post(url, headers=headers, json=payload, timeout=60)
+            if resp.status_code != 200:
+                raise RuntimeError(f"ElevenLabs API error: {resp.status_code} {resp.text[:200]}")
+
+            with open(out_path, "wb") as f:
+                f.write(resp.content)
+
+            duration = self._estimate_duration(clean_text)
+            return TTSOutput(audio_path=str(out_path), duration_seconds=duration, references=references)
         except Exception as e:
-            logger.error(f"TTS synthesis failed: {e}")
-            return TTSOutput(
-                audio_path="",
-                duration_seconds=0.0
-            )
-    
-    def _prepare_text_for_dia(self, text: str, persona: Persona) -> str:
-        """
-        Prepare text for Dia format with speaker tags and voice cloning.
-        
-        Dia expects:
-        - Text to start with [S1] 
-        - Alternating [S1] and [S2] tags
-        - Voice cloning: transcript of reference audio + new text
-        """
+            logger.error(f"ElevenLabs TTS failed: {e}")
+            return TTSOutput(audio_path="", duration_seconds=0.0)
+
+    def _resolve_voice_id(self, persona: Persona) -> Optional[str]:
+        # Try config/tts_voices.yaml mapping by persona name
+        try:
+            import yaml
+            repo_root = Path(__file__).resolve().parents[2]
+            cfg = repo_root / "config" / "tts_voices.yaml"
+            if cfg.exists():
+                with open(cfg, "r") as f:
+                    data = yaml.safe_load(f) or {}
+                voices = data.get("voices", {})
+                entry = voices.get(persona.name) or voices.get(persona.name.strip())
+                if isinstance(entry, dict):
+                    # Support nested provider structure
+                    return entry.get("voiceId") or entry.get("voice_id")
+                if isinstance(entry, str):
+                    return entry
+        except Exception:
+            pass
+        # Fallback to env voice id
+        return self.default_voice_id or None
+
+    def _split_text_and_references(self, text: str) -> tuple[str, list]:
         import re
-        
-        # Remove citations for speech
-        clean_text = re.sub(r'\[[^\]]+\]', '', text)
-        clean_text = re.sub(r'\s+', ' ', clean_text).strip()
-        
-        # Add speaker tag for single speaker
-        speaker_tag = "[S1]"
-        
-        # Handle voice cloning with reference audio
-        if hasattr(persona.voice, 'ref_audio') and persona.voice.ref_audio and os.path.exists(persona.voice.ref_audio):
-            # For voice cloning, we need the transcript of the reference audio
-            # This is a placeholder - in practice, you'd need the actual transcript
-            ref_transcript = f"[S1] {persona.name} speaking in their natural voice."
-            dia_text = f"{ref_transcript} {speaker_tag} {clean_text}"
-        else:
-            # No voice cloning, just use speaker tag
-            dia_text = f"{speaker_tag} {clean_text}"
-        
-        # Add non-verbal cues based on persona
-        dia_text = self._add_nonverbal_cues(dia_text, persona)
-        
-        # Ensure proper ending for audio quality (end with speaker tag)
-        if not dia_text.strip().endswith(speaker_tag):
-            dia_text += f" {speaker_tag}"
-        
-        return dia_text
-    
-    def _add_nonverbal_cues(self, text: str, persona: Persona) -> str:
-        """Add appropriate non-verbal cues based on persona"""
-        # Supported non-verbals from README
-        # (laughs), (clears throat), (sighs), (gasps), (coughs), (singing), etc.
-        
-        # Add subtle non-verbal cues based on persona tone
-        if persona.tone.lower() == 'passionate':
-            # Add occasional emphasis for passionate tone
-            if 'important' in text.lower() or 'crucial' in text.lower():
-                text = text.replace('important', 'important (sighs)')
-                text = text.replace('crucial', 'crucial (gasps)')
-        
-        elif persona.tone.lower() == 'thoughtful':
-            # Add occasional pauses for thoughtful tone
-            sentences = text.split('.')
-            if len(sentences) > 2:
-                # Add a throat clear in the middle
-                mid_point = len(sentences) // 2
-                sentences[mid_point] = sentences[mid_point] + ' (clears throat)'
-                text = '.'.join(sentences)
-        
-        # Add personality-specific cues sparingly
-        if hasattr(persona, 'speech_quirks') and persona.speech_quirks:
-            for quirk in persona.speech_quirks:
-                if 'humor' in quirk.lower() or 'laugh' in quirk.lower():
-                    # Add occasional laughter
-                    if '.' in text:
-                        text = text.replace('.', ' (chuckle).', 1)  # Add one chuckle
-                        break
-        
-        return text
-    
-    def _generate_with_dia(self, dia_text: str, output_path: str, persona: Persona) -> bool:
-        """Generate audio using Dia model"""
-        try:
-            if self.processor is None or self.model is None:
-                logger.error("Dia model not loaded")
-                return False
-            
-            # Prepare inputs
-            inputs = self.processor(text=[dia_text], padding=True, return_tensors="pt").to(self.device)
-            
-            # Generate audio with Dia parameters
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    max_new_tokens=3072,
-                    guidance_scale=3.0,
-                    temperature=1.8,
-                    top_p=0.90,
-                    top_k=45
-                )
-            
-            # Decode and save audio
-            decoded_outputs = self.processor.batch_decode(outputs)
-            self.processor.save_audio(decoded_outputs, output_path)
-            
-            return os.path.exists(output_path)
-            
-        except Exception as e:
-            logger.error(f"Dia generation failed: {e}")
-            return False
-    
-    def _estimate_duration(self, dia_text: str) -> float:
-        """
-        Estimate audio duration based on text length.
-        Dia README suggests: 1 second ≈ 86 tokens
-        """
-        # Rough estimation: count words and convert to tokens
-        words = len(dia_text.split())
-        estimated_tokens = words * 1.3  # Rough word-to-token ratio
-        estimated_duration = estimated_tokens / 86  # Tokens per second from README
-        
-        return max(estimated_duration, 1.0)  # Minimum 1 second
-    
+        refs = re.findall(r"\[(S\d+|L\d+|R\d+)\]", text)
+        clean_text = re.sub(r"\[(?:S\d+|L\d+|R\d+)\]", "", text)
+        clean_text = re.sub(r"\s+", " ", clean_text).strip()
+        return clean_text, refs
+
     def _generate_audio_filename(self, persona: Persona) -> str:
-        """Generate unique filename for audio output"""
         import uuid
         from datetime import datetime
-        
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         unique_id = str(uuid.uuid4())[:8]
         safe_name = persona.name.lower().replace(" ", "_").replace("-", "_")
-        
         return f"{safe_name}_{timestamp}_{unique_id}.mp3"
 
 class TTSAdapter:
@@ -211,10 +104,18 @@ class TTSAdapter:
     """
     
     def __init__(self):
-        self.engines = {
-            'dia': DiaTTSEngine()
-        }
-        self.default_engine = settings.TTS_VENDOR
+        self.engines: Dict[str, Any] = {}
+        # Prefer ElevenLabs when available
+        if os.environ.get("ELEVEN_API_KEY"):
+            try:
+                self.engines["elevenlabs"] = ElevenLabsTTSEngine()
+            except Exception as e:
+                logger.warning(f"ElevenLabs init failed: {e}")
+        # Always provide mock as fallback
+        self.engines["mock"] = MockTTSEngine()
+
+        # Default engine: 'elevenlabs' if present else 'mock'
+        self.default_engine = "elevenlabs" if "elevenlabs" in self.engines else "mock"
     
     def synthesize(self, tts_input: TTSInput) -> TTSOutput:
         """
@@ -227,17 +128,8 @@ class TTSAdapter:
             TTSOutput with audio_path and duration
         """
         # Determine which engine to use
-        vendor = tts_input.persona.voice.vendor
-        if vendor not in self.engines:
-            logger.warning(f"TTS vendor '{vendor}' not available, using default '{self.default_engine}'")
-            vendor = self.default_engine
-        
-        if vendor not in self.engines:
-            logger.error(f"No TTS engine available for vendor '{vendor}'")
-            return TTSOutput(audio_path="", duration_seconds=0.0)
-        
-        # Use the appropriate engine
-        engine = self.engines[vendor]
+        # Ignore persona vendor; pick available engine based on environment
+        engine = self.engines.get(self.default_engine) or self.engines.get("mock")
         return engine.synthesize(tts_input)
     
     def get_available_voices(self, vendor: str = None) -> Dict[str, Any]:
@@ -263,6 +155,47 @@ class TTSAdapter:
         # Dia doesn't need traditional voice settings validation
         # It works with speaker tags and reference audio
         return True
+
+
+class MockTTSEngine:
+    """Simple mock TTS engine that generates a short silent WAV file."""
+    def __init__(self):
+        self.output_dir = Path(settings.DATA_DIR) / "audio" / "turns"
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+
+    def synthesize(self, tts_input: TTSInput) -> TTSOutput:
+        try:
+            filename = self._generate_audio_filename(tts_input.persona)
+            out_path = self.output_dir / filename
+            self._write_silence_wav(out_path, duration_seconds=self._estimate_duration(tts_input.styled_text))
+            return TTSOutput(audio_path=str(out_path), duration_seconds=self._estimate_duration(tts_input.styled_text))
+        except Exception as e:
+            logger.error(f"Mock TTS failed: {e}")
+            return TTSOutput(audio_path="", duration_seconds=0.0)
+
+    def _write_silence_wav(self, path: Path, duration_seconds: float, sample_rate: int = 16000):
+        import wave
+        import struct
+        num_samples = int(duration_seconds * sample_rate)
+        with wave.open(str(path), 'w') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)  # 16-bit
+            wf.setframerate(sample_rate)
+            silence = struct.pack('<h', 0)
+            for _ in range(num_samples):
+                wf.writeframes(silence)
+
+    def _generate_audio_filename(self, persona: Persona) -> str:
+        import uuid
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        safe_name = persona.name.lower().replace(" ", "_").replace("-", "_")
+        return f"{safe_name}_{timestamp}_{unique_id}.wav"
+
+    def _estimate_duration(self, text: str) -> float:
+        words = max(1, len(text.split()))
+        return max(1.0, (words / 150.0) * 60.0)
 
 # Singleton instance
 _tts_adapter = None

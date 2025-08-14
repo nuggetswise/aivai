@@ -10,7 +10,7 @@ default_unknown: "I'd need to examine more evidence before drawing conclusions o
 voice:
   vendor: "dia"
   ref_audio: "data/voices/alex_reference.wav"
-  speaker_tag: "S1"  # Dia uses S1/S2 tags
+  speaker_tag: "[S1]"  # Dia uses S1/S2 tags
   pitch: 1.0
   speed: 0.95
   emotion: "contemplative"
@@ -23,3 +23,14 @@ bias_indicators:
   - "academic sources over popular media"
   - "methodological rigor over anecdotal evidence"
   - "historical precedents for modern developments"
+
+style_toolkit:
+  contractions: true
+  sentence_length: "varied"
+  rhetorical_devices:
+    - "contrast pairs"
+    - "definition then example"
+    - "rule of three"
+  banter_moves:
+    - "ask follow-up question after counterpoint"
+    - "invite clarification on definition"

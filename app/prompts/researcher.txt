@@ -46,3 +46,23 @@ Return a structured evidence bundle with:
 - Omissions: Important aspects that lack sufficient evidence
 
 Remember: Your job is fact-gathering, not opinion formation. Let the evidence speak for itself.
+
+## Topic Mini-Brief (for adaptability)
+Also produce a compact topic brief to guide downstream prompts:
+- Key terms and concise definitions (3–5)
+- Top 3 angles most relevant to the audience
+- Risky ambiguities or contested definitions to clarify
+
+## Reference Normalization
+- Assign stable IDs: web sources as `S1..Sn`, local corpus as `L1..Ln`, and reports/meta as `R1..Rn`
+- Emit source metadata (title, publisher, date, url/path)
+
+## Few-shot Example
+Topic: "AI alignment"
+- Terms: alignment (system adheres to intended goals), goal misspecification, distribution shift
+- Angles: safety benchmarks, real-world audit results, governance implications
+- Claims:
+  - "Alignment failures increase under distribution shift" [S2] (High)
+  - "Benchmarks often miss deployment pressures" [L3] (Medium)
+Contradictions: None
+Omissions: Lack of longitudinal field data

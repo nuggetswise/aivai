@@ -33,7 +33,6 @@ The platform consists of several key components:
 ### Prerequisites
 
 - Python 3.10+
-- Poetry package manager
 - FFmpeg
 - Node.js 18+ (for frontend)
 
@@ -55,6 +54,10 @@ The platform consists of several key components:
    ```bash
    make install
    ```
+
+### A/V Pipeline
+
+See `docs/av_pipeline.md` for configuring ElevenLabs voices and building audio/captions/videos.
 
 ### Running Your First Episode
 
@@ -176,7 +179,7 @@ Source content is filtered based on whitelist/greylist/blacklist policies define
 The platform supports multiple TTS providers:
 
 - DIA TTS (default)
-- OpenAI TTS
+- Gemini-only stack for LLM; OpenAI disabled
 - ElevenLabs
 - Custom providers through the adapter interface
 
@@ -192,16 +195,10 @@ python scripts/run_episode.py --topic "Climate Change Solutions" --avatar-a avat
 python scripts/seed_index.py --avatar avatars/skeptic.yaml --sources corpus/skeptic/links.csv --max 50 --freshness 90
 ```
 
-### API Endpoints
+### API
 
-The platform provides a REST API at `http://localhost:8000`:
-
-- `GET /avatars` - List available avatars
-- `POST /episodes` - Create a new episode
-- `POST /episodes/{id}/start` - Start an episode
-- `GET /episodes/{id}/status` - Get episode status
-- `GET /episodes/{id}` - Get episode details
-- `WebSocket /ws/{id}` - Real-time episode updates
+- Live docs: `http://localhost:8000/docs` (Swagger) and `http://localhost:8000/redoc`
+- Reference: `docs/api.md` (endpoints and request/response examples)
 
 ## Development
 

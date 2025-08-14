@@ -71,8 +71,7 @@ def main():
             effective_key = settings.REASONING_API_KEY or settings.GEMINI_API_KEY
             print(f"Effective API key for reasoning model: {'✅ Present' if effective_key else '❌ Missing'}")
         else:
-            print("Reasoning model is not Gemini, checking OpenAI")
-            print(f"OpenAI API key: {'✅ Present' if settings.OPENAI_API_KEY else '❌ Missing'}")
+            print("Reasoning model is not Gemini. This stack is Gemini-only.")
     except Exception as e:
         print(f"❌ Error loading application config: {e}")
     

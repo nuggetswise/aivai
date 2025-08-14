@@ -3,10 +3,12 @@ import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
+import sys
 
 from app.models import (
     Episode, EpisodeConfig, Avatar, Turn, EpisodePhase, TurnIntent,
-    ResearcherInput, CommentatorInput, VerifierInput, StyleInput, TTSInput
+    ResearcherInput, CommentatorInput, VerifierInput, StyleInput, TTSInput,
+    EpisodeAssets
 )
 from app.config import settings
 from app.agents.researcher import get_researcher
@@ -82,14 +84,41 @@ class EpisodeRunner:
             episode.completed_at = datetime.utcnow()
             
             # Generate final artifacts
-            transcript_path = await self._generate_transcript(episode)
+            transcript_artifacts = await self._generate_transcript(episode)
+            transcript_path = transcript_artifacts.get("transcript_path") if isinstance(transcript_artifacts, dict) else str(transcript_artifacts)
+            media_assets = transcript_artifacts.get("assets") if isinstance(transcript_artifacts, dict) else None
             episode.transcript_path = transcript_path
             
+            # Persist assets on episode if available
+            if media_assets:
+                episode.assets = EpisodeAssets(
+                    mp3=media_assets.get("audio"),
+                    srt=media_assets.get("srt"),
+                    vtt=media_assets.get("vtt"),
+                    videos=media_assets.get("videos", []),
+                    clips=[]
+                )
+            
+            # Persist assets if present
+            if media_assets:
+                try:
+                    from app.models import EpisodeAssets
+                    episode.assets = EpisodeAssets(
+                        mp3=media_assets.get("audio"),
+                        srt=media_assets.get("srt"),
+                        vtt=media_assets.get("vtt"),
+                        videos=media_assets.get("videos", []),
+                        clips=media_assets.get("clips", []),
+                    )
+                except Exception:
+                    pass
+
             yield {"event": "episode_complete", "data": {
                 "episode_id": episode.id,
                 "turn_count": episode.turn_count,
                 "duration_minutes": episode.duration_minutes,
-                "transcript_path": transcript_path
+                "transcript_path": transcript_path,
+                "media_assets": media_assets
             }}
             
         except Exception as e:
@@ -215,14 +244,35 @@ class EpisodeRunner:
         style_output = self.style_agent.apply_style(style_input)
         final_text = style_output.styled_text
         
-        # Step 5: Generate audio
+        # Step 5: Generate audio (clean speech only; citations are stripped downstream too)
         tts_input = TTSInput(
             styled_text=final_text,
             persona=avatar.persona
         )
         tts_output = self.tts_adapter.synthesize(tts_input)
         
-        # Step 6: Create turn object
+        # Step 6: Create turn object (populate a minimal beats[] for unified schema)
+        beat_label = {
+            TurnIntent.OPENING: "opening",
+            TurnIntent.POSITIONING: "position",
+            TurnIntent.REBUTTAL: "rebuttal",
+            TurnIntent.CLOSING: "closing",
+            TurnIntent.EVIDENCE_HARVEST: "evidence",
+        }.get(intent, "segment")
+
+        from app.models import Beat, BeatProsody
+        beat_references = [c.id for c in final_citations] if final_citations else []
+        beats = [
+            Beat(
+                label=beat_label,
+                target_duration_s=None,
+                text=final_text,
+                emotion=None,
+                prosody=BeatProsody(),
+                references=beat_references,
+            )
+        ]
+
         turn = Turn(
             avatar_id=avatar.id,
             avatar_key=avatar_key,
@@ -230,6 +280,7 @@ class EpisodeRunner:
             intent=intent,
             text=final_text,
             citations=final_citations,
+            beats=beats,
             evidence_bundle_id=evidence_bundle.id if evidence_bundle else None,
             opponent_summary=opponent_summary,
             audio_path=tts_output.audio_path,
@@ -276,10 +327,14 @@ class EpisodeRunner:
         recent_points = [turn.text[:100] + "..." for turn in opponent_turns]
         return " ".join(recent_points)
     
-    async def _generate_transcript(self, episode: Episode) -> str:
-        """Generate and save episode transcript"""
+    async def _generate_transcript(self, episode: Episode) -> Dict[str, Any]:
+        """Generate and save episode transcript JSON and a scriptfix-formatted Markdown file.
+
+        Returns a dict with keys: transcript_path, markdown_path, assets (optional)
+        """
         from app.models import episode_to_transcript_format
         import json
+        import subprocess
         
         transcript_data = {
             "episode_id": episode.id,
@@ -303,7 +358,74 @@ class EpisodeRunner:
             json.dump(transcript_data, f, indent=2)
         
         logger.info(f"Transcript saved: {transcript_path}")
-        return str(transcript_path)
+        
+        # Also generate scriptfix-compliant Markdown alongside JSON
+        assets = None
+        try:
+            md_output = transcript_dir / f"{episode.id}_transcript.md"
+            repo_root = Path(__file__).resolve().parents[2]
+            script_path = repo_root / "scripts" / "generate_transcript.py"
+            subprocess.run([
+                sys.executable, str(script_path),
+                "--input", str(transcript_path),
+                "--output", str(md_output),
+                "--tighten"
+            ], check=True)
+            logger.info(f"Markdown transcript saved: {md_output}")
+
+            # Build media assets (audio, captions, videos)
+            media_builder = repo_root / "md_podcast_build.py"
+            if media_builder.exists():
+                slug = f"{episode.id}"
+                subprocess.run([
+                    sys.executable, str(media_builder),
+                    "--md", str(md_output),
+                    "--slug", slug,
+                    "--voices", str(repo_root / "config" / "tts_voices.yaml")
+                ], check=True)
+                logger.info("Media assets built successfully")
+                # Optionally, collect and log asset paths
+                output_dir = repo_root / "output"
+                assets = {
+                    "audio": str((output_dir / f"{slug}.mp3").resolve()),
+                    "srt": str((output_dir / f"{slug}.srt").resolve()),
+                    "vtt": str((output_dir / f"{slug}.vtt").resolve()),
+                    "videos": [
+                        str((output_dir / f"{slug}_vertical.mp4").resolve()),
+                        str((output_dir / f"{slug}_square.mp4").resolve()),
+                        str((output_dir / f"{slug}_horizontal.mp4").resolve()),
+                    ],
+                }
+                logger.info(f"Assets: {assets}")
+
+                # Auto-generate 3 clips if clip_maker is present
+                clip_maker = repo_root / "clip_maker.py"
+                if clip_maker.exists():
+                    try:
+                        subprocess.run([
+                            sys.executable, str(clip_maker),
+                            "--audio", str(output_dir / f"{slug}.mp3"),
+                            "--srt", str(output_dir / f"{slug}.srt"),
+                            "--outdir", str(output_dir / "clips" / slug),
+                            "--n", "3"
+                        ], check=True)
+                        logger.info("Clips generated successfully")
+                    except Exception as ce:
+                        logger.warning(f"Clip generation failed: {ce}")
+            else:
+                logger.warning("Media builder not found; skipping A/V rendering")
+        except Exception as e:
+            logger.error(f"Failed to generate Markdown and/or media assets: {e}")
+
+        # Return artifact info
+        result: Dict[str, Any] = {
+            "transcript_path": str(transcript_path),
+            "markdown_path": str(md_output),
+        }
+        if assets:
+            logger.info(f"Episode assets ready for {episode.id}: {assets}")
+            result["assets"] = assets
+        return result
 
 # Singleton instance
 _episode_runner = None
